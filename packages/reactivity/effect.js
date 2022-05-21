@@ -1,7 +1,9 @@
-const data = { foo: 1 };
+import { computed } from "./computed.js";
 
 let activeEffect; //  存储被注册的副作用函数，目的是摆脱对副作用函数名称的依赖
 const effectStack = []; //  副作用函数栈
+const bucket = new WeakMap(); //  存储副作用函数的桶
+
 const jobQueue = new Set(); //  任务队列
 const p = Promise.resolve();
 
@@ -16,19 +18,21 @@ function flushJob() {
     }).finally(() => (isFlushing = false));
 }
 
-function effect(fn, options = {}) {
+export function effect(fn, options = {}) {
     //  用于注册副作用函数
     const effectFn = () => {
         cleanup(effectFn);
         activeEffect = effectFn;
         effectStack.push(effectFn);
-        fn();
+        const res = fn();
         effectStack.pop();
         activeEffect = effectStack[effectStack.length - 1];
+        return res;
     };
     effectFn.options = options;
     effectFn.deps = [];
-    effectFn();
+    if (!options.lazy) effectFn();
+    return effectFn;
 }
 
 function cleanup(effectFn) {
@@ -40,7 +44,7 @@ function cleanup(effectFn) {
     effectFn.deps.length = 0;
 }
 
-function track(target, property) {
+export function track(target, property) {
     if (!activeEffect) return target[property];
     let depsMap = bucket.get(target);
     if (!depsMap) bucket.set(target, (depsMap = new Map()));
@@ -50,7 +54,7 @@ function track(target, property) {
     activeEffect.deps.push(deps); //  将与当前副作用函数相关的依赖函数添加到依赖集合中
 }
 
-function trigger(target, property) {
+export function trigger(target, property) {
     const depsMap = bucket.get(target);
     if (!depsMap) return;
     const effects = depsMap.get(property);
@@ -65,8 +69,7 @@ function trigger(target, property) {
     });
 }
 
-const bucket = new WeakMap(); //  存储副作用函数的桶
-
+const data = { foo: 1, bar: 2 };
 const obj = new Proxy(data, {
     get(target, property) {
         track(target, property);
@@ -76,22 +79,13 @@ const obj = new Proxy(data, {
     set(target, property, newVal) {
         target[property] = newVal;
         trigger(target, property);
+        return true;
     },
 });
 
-let temp1, temp2;
-
-effect(
-    () => {
-        console.log(obj.foo);
-    }, {
-        scheduler(effectFn) {
-            jobQueue.add(effectFn);
-            flushJob();
-        },
-    }
-);
-
+const sumRes = computed(() => obj.foo + obj.bar);
+// effect(() => {
+//     console.log(sumRes.value);
+// });
 obj.foo++;
-obj.foo++;
-obj.foo++;
+console.log(sumRes.value);
