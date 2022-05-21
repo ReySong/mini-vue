@@ -1,9 +1,22 @@
 const data = { foo: 1 };
 
 let activeEffect; //  存储被注册的副作用函数，目的是摆脱对副作用函数名称的依赖
-const effectStack = [];
+const effectStack = []; //  副作用函数栈
+const jobQueue = new Set(); //  任务队列
+const p = Promise.resolve();
 
-function effect(fn) {
+let isFlushing = false;
+
+function flushJob() {
+    if (isFlushing) return;
+    isFlushing = true;
+    p.then(() => {
+        //  添加到微任务队列
+        jobQueue.forEach((job) => job());
+    }).finally(() => (isFlushing = false));
+}
+
+function effect(fn, options = {}) {
     //  用于注册副作用函数
     const effectFn = () => {
         cleanup(effectFn);
@@ -13,6 +26,7 @@ function effect(fn) {
         effectStack.pop();
         activeEffect = effectStack[effectStack.length - 1];
     };
+    effectFn.options = options;
     effectFn.deps = [];
     effectFn();
 }
@@ -42,10 +56,13 @@ function trigger(target, property) {
     const effects = depsMap.get(property);
     const effectsToRun = new Set();
     effects &&
-        effects.forEach((fn) => {
-            if (fn !== activeEffect) effectsToRun.add(fn);
+        effects.forEach((effectFn) => {
+            if (effectFn !== activeEffect) effectsToRun.add(effectFn);
         });
-    effectsToRun.forEach((fn) => fn());
+    effectsToRun.forEach((effectFn) => {
+        if (effectFn.options.scheduler) effectFn.options.scheduler(effectFn);
+        else effectFn();
+    });
 }
 
 const bucket = new WeakMap(); //  存储副作用函数的桶
@@ -64,6 +81,17 @@ const obj = new Proxy(data, {
 
 let temp1, temp2;
 
-effect(() => {
-    obj.foo++;
-});
+effect(
+    () => {
+        console.log(obj.foo);
+    }, {
+        scheduler(effectFn) {
+            jobQueue.add(effectFn);
+            flushJob();
+        },
+    }
+);
+
+obj.foo++;
+obj.foo++;
+obj.foo++;
