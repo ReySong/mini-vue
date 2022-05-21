@@ -1,13 +1,17 @@
-const data = { ok: true, text: "helo world" };
+const data = { foo: true, bar: true };
 
 let activeEffect; //  存储被注册的副作用函数，目的是摆脱对副作用函数名称的依赖
+const effectStack = [];
 
 function effect(fn) {
     //  用于注册副作用函数
     const effectFn = () => {
         cleanup(effectFn);
         activeEffect = effectFn;
+        effectStack.push(effectFn);
         fn();
+        effectStack.pop();
+        activeEffect = effectStack[effectStack.length - 1];
     };
     effectFn.deps = [];
     effectFn();
@@ -54,9 +58,14 @@ const obj = new Proxy(data, {
     },
 });
 
-effect(() => {
-    obj.ok ? obj.text : "not";
-});
+let temp1, temp2;
 
-obj.ok = false;
-obj.text = "hello vue3";
+effect(function effectFn1() {
+    console.log("effectFn1");
+    effect(function effectFn2() {
+        console.log("effectFn2");
+        temp2 = obj.bar;
+    });
+    temp1 = obj.foo;
+});
+obj.foo = 1;
