@@ -1,4 +1,4 @@
-const data = { foo: true, bar: true };
+const data = { foo: 1 };
 
 let activeEffect; //  存储被注册的副作用函数，目的是摆脱对副作用函数名称的依赖
 const effectStack = [];
@@ -40,8 +40,12 @@ function trigger(target, property) {
     const depsMap = bucket.get(target);
     if (!depsMap) return;
     const effects = depsMap.get(property);
-    const effectsToRun = new Set(effects);
-    effects && effectsToRun.forEach((fn) => fn());
+    const effectsToRun = new Set();
+    effects &&
+        effects.forEach((fn) => {
+            if (fn !== activeEffect) effectsToRun.add(fn);
+        });
+    effectsToRun.forEach((fn) => fn());
 }
 
 const bucket = new WeakMap(); //  存储副作用函数的桶
@@ -60,12 +64,6 @@ const obj = new Proxy(data, {
 
 let temp1, temp2;
 
-effect(function effectFn1() {
-    console.log("effectFn1");
-    effect(function effectFn2() {
-        console.log("effectFn2");
-        temp2 = obj.bar;
-    });
-    temp1 = obj.foo;
+effect(() => {
+    obj.foo++;
 });
-obj.foo = 1;
