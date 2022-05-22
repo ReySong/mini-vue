@@ -1,4 +1,5 @@
 import { computed } from "./computed.js";
+import { watch } from "./watch.js";
 
 let activeEffect; //  存储被注册的副作用函数，目的是摆脱对副作用函数名称的依赖
 const effectStack = []; //  副作用函数栈
@@ -83,9 +84,12 @@ const obj = new Proxy(data, {
     },
 });
 
-const sumRes = computed(() => obj.foo + obj.bar);
-// effect(() => {
-//     console.log(sumRes.value);
-// });
+watch(
+    () => obj.foo,
+    (newVal, oldVal) => {
+        console.log(`newVal: ${newVal}, oldVal: ${oldVal}`);
+    }, {
+        immediate: true,
+    }
+);
 obj.foo++;
-console.log(sumRes.value);
