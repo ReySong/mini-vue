@@ -8,9 +8,16 @@ export function watch(source, cb, options = {}) {
         getter = () => traverse(source);
     }
     let oldVal, newVal;
+    let cleanup;
+
+    function onInvalidate(fn) {
+        cleanup = fn;
+    }
+
     const job = () => {
         newVal = effectFn();
-        cb(newVal, oldVal);
+        if (cleanup) cleanup();
+        cb(newVal, oldVal, onInvalidate);
         oldVal = newVal;
     };
     const effectFn = effect(() => getter(), {

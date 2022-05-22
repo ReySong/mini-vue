@@ -86,8 +86,15 @@ const obj = new Proxy(data, {
 
 watch(
     () => obj.foo,
-    (newVal, oldVal) => {
-        console.log(`newVal: ${newVal}, oldVal: ${oldVal}`);
+    async(newVal, oldVal, onInvalidate) => {
+        let expired = false;
+        onInvalidate(() => {
+            expired = true;
+        });
+        // const res = await fetch("/path/to/request");
+        if (!expired) {
+            // finalData = res;
+        }
     }, {
         immediate: true,
     }
