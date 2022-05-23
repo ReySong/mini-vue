@@ -1,14 +1,14 @@
 import { effect, track, trigger, ITERATE_KEY, TriggerType } from "./effect.js";
 
-const obj = {};
-const proto = { foo: 1 };
-
-export function reactive(obj) {
+function createReactiveObject(obj, isShallow = false) {
     const p = new Proxy(obj, {
         get(target, property, receiver) {
             if (property === "raw") return target;
             track(target, property);
-            return Reflect.get(target, property, receiver);
+            const res = Reflect.get(target, property, receiver);
+            if (isShallow) return res;
+            if (typeof res === "object" && res !== null) return reactive(res);
+            return res;
         },
         set(target, property, newVal, receiver) {
             const oldVal = target[property];
@@ -39,12 +39,17 @@ export function reactive(obj) {
     return p;
 }
 
-const child = reactive(obj);
-const parent = reactive(proto);
-Object.setPrototypeOf(child, parent);
+export function reactive(obj) {
+    return createReactiveObject(obj);
+}
+
+export function shallowReactive(obj) {
+    return createReactiveObject(obj, true);
+}
+
+const obj = reactive({ foo: { bar: 1 } });
 
 effect(() => {
-    console.log(child.foo);
+    console.log(obj.foo.bar);
 });
-
-child.foo = 2;
+obj.foo.bar = 2;
