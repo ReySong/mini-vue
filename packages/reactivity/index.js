@@ -1,4 +1,4 @@
-import { shallowReadonly } from "./reactive.js";
+import { readonly, shallowReadonly } from "./reactive.js";
 
 export { effect, track, trigger }
 from "./effect.js";
@@ -9,6 +9,6 @@ from "./watch.js";
 export { reactive, shallowReactive, readonly, shallowReadonly }
 from "./reactive.js";
 
-const obj = shallowReadonly({ foo: { bar: 1 } });
+const obj = readonly({ foo: { bar: 1 } });
 
 obj.foo.bar++;

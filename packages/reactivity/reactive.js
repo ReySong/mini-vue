@@ -5,10 +5,10 @@ function createReactiveObject(obj, { isShallow = false, isReadonly = false }) {
     return new Proxy(obj, {
         get(target, property, receiver) {
             if (property === "raw") return target;
-            track(target, property);
+            if (!isReadonly) track(target, property);
             const res = Reflect.get(target, property, receiver);
             if (isShallow) return res;
-            if (typeof res === "object" && res !== null) return reactive(res);
+            if (typeof res === "object" && res !== null) return isReadonly ? readonly(res) : reactive(res);
             return res;
         },
         set(target, property, newVal, receiver) {
