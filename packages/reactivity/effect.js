@@ -1,22 +1,27 @@
-import { computed } from "./computed.js";
-import { watch } from "./watch.js";
-
 let activeEffect; //  存储被注册的副作用函数，目的是摆脱对副作用函数名称的依赖
 const effectStack = []; //  副作用函数栈
 const bucket = new WeakMap(); //  存储副作用函数的桶
+export const ITERATE_KEY = Symbol();
+export const TriggerType = {
+    SET: "SET",
+    ADD: "ADD",
+    DELETE: "DELETE",
+};
 
 const jobQueue = new Set(); //  任务队列
-const p = Promise.resolve();
+const promise = Promise.resolve();
 
 let isFlushing = false;
 
 function flushJob() {
     if (isFlushing) return;
     isFlushing = true;
-    p.then(() => {
-        //  添加到微任务队列
-        jobQueue.forEach((job) => job());
-    }).finally(() => (isFlushing = false));
+    promise
+        .then(() => {
+            //  添加到微任务队列
+            jobQueue.forEach((job) => job());
+        })
+        .finally(() => (isFlushing = false));
 }
 
 export function effect(fn, options = {}) {
@@ -55,11 +60,19 @@ export function track(target, property) {
     activeEffect.deps.push(deps); //  将与当前副作用函数相关的依赖函数添加到依赖集合中
 }
 
-export function trigger(target, property) {
+export function trigger(target, property, type) {
     const depsMap = bucket.get(target);
     if (!depsMap) return;
     const effects = depsMap.get(property);
     const effectsToRun = new Set();
+
+    if (type === TriggerType.ADD || type === TriggerType.DELETE) {
+        const iterateEffects = depsMap.get(ITERATE_KEY);
+        iterateEffects &&
+            iterateEffects.forEach((effectFn) => {
+                if (effectFn !== activeEffect) effectsToRun.add(effectFn);
+            });
+    }
     effects &&
         effects.forEach((effectFn) => {
             if (effectFn !== activeEffect) effectsToRun.add(effectFn);
@@ -69,34 +82,3 @@ export function trigger(target, property) {
         else effectFn();
     });
 }
-
-const data = { foo: 1, bar: 2 };
-const obj = new Proxy(data, {
-    get(target, property) {
-        track(target, property);
-        return target[property];
-    },
-
-    set(target, property, newVal) {
-        target[property] = newVal;
-        trigger(target, property);
-        return true;
-    },
-});
-
-watch(
-    () => obj.foo,
-    async(newVal, oldVal, onInvalidate) => {
-        let expired = false;
-        onInvalidate(() => {
-            expired = true;
-        });
-        // const res = await fetch("/path/to/request");
-        if (!expired) {
-            // finalData = res;
-        }
-    }, {
-        immediate: true,
-    }
-);
-obj.foo++;
