@@ -1,7 +1,8 @@
 import { effect, track, trigger, ITERATE_KEY, TriggerType } from "./effect.js";
 
-function createReactiveObject(obj, isShallow = false) {
-    const p = new Proxy(obj, {
+function createReactiveObject(obj, { isShallow = false, isReadonly = false }) {
+    obj.raw = obj;
+    return new Proxy(obj, {
         get(target, property, receiver) {
             if (property === "raw") return target;
             track(target, property);
@@ -11,6 +12,10 @@ function createReactiveObject(obj, isShallow = false) {
             return res;
         },
         set(target, property, newVal, receiver) {
+            if (isReadonly) {
+                console.warn(`property ${property} is readonly !`);
+                return true;
+            }
             const oldVal = target[property];
             const type = Object.prototype.hasOwnProperty.call(target, property) ? TriggerType.SET : TriggerType.ADD;
             const res = Reflect.set(target, property, newVal, receiver);
@@ -35,21 +40,20 @@ function createReactiveObject(obj, isShallow = false) {
             return res;
         },
     });
-    p.raw = obj;
-    return p;
 }
 
 export function reactive(obj) {
-    return createReactiveObject(obj);
+    return createReactiveObject(obj, {});
 }
 
 export function shallowReactive(obj) {
-    return createReactiveObject(obj, true);
+    return createReactiveObject(obj, { isShallow: true });
 }
 
-const obj = reactive({ foo: { bar: 1 } });
+export function readonly(obj) {
+    return createReactiveObject(obj, { isReadonly: true });
+}
 
-effect(() => {
-    console.log(obj.foo.bar);
-});
-obj.foo.bar = 2;
+export function shallowReadonly(obj) {
+    return createReactiveObject(obj, { isShallow: true, isReadonly: true });
+}
