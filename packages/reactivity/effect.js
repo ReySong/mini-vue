@@ -50,8 +50,8 @@ function cleanup(effectFn) {
     effectFn.deps.length = 0;
 }
 
-export function track(target, property) {
-    if (!activeEffect) return target[property];
+export function track(target, property, shouldTrack) {
+    if (!activeEffect || !shouldTrack) return target[property];
     let depsMap = bucket.get(target);
     if (!depsMap) bucket.set(target, (depsMap = new Map()));
     let deps = depsMap.get(property);
@@ -60,11 +60,29 @@ export function track(target, property) {
     activeEffect.deps.push(deps); //  将与当前副作用函数相关的依赖函数添加到依赖集合中
 }
 
-export function trigger(target, property, type) {
+export function trigger(target, property, type, newVal) {
     const depsMap = bucket.get(target);
     if (!depsMap) return;
     const effects = depsMap.get(property);
     const effectsToRun = new Set();
+
+    if (type === TriggerType.ADD && Array.isArray(target)) {
+        const lengthEffects = depsMap.get("length");
+        lengthEffects &&
+            lengthEffects.forEach((effectFn) => {
+                if (effectFn !== activeEffect) effectsToRun.add(effectFn);
+            });
+    }
+
+    if (Array.isArray(target) && property === "key") {
+        depsMap.forEach((effects, property) => {
+            if (property >= newVal) {
+                effects.forEach((effectFn) => {
+                    if (effectFn !== activeEffect) effectsToRun.add(effectFn);
+                });
+            }
+        });
+    }
 
     if (type === TriggerType.ADD || type === TriggerType.DELETE) {
         const iterateEffects = depsMap.get(ITERATE_KEY);

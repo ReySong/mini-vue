@@ -1,11 +1,35 @@
-import { effect, track, trigger, ITERATE_KEY, TriggerType } from "./effect.js";
+import { track, trigger, ITERATE_KEY, TriggerType } from "./effect.js";
+
+const reactiveMap = new Map();
+const arrayInstrumentations = {};
+let shouldTrack = true;
+["push", "pop", "unshift", "shift", "splice"].forEach((method) => {
+    const originMethod = Array.prototype[method];
+    arrayInstrumentations[method] = function(...args) {
+        shouldTrack = false;
+        let res = originMethod.apply(this, args);
+        shouldTrack = true;
+        return res;
+    };
+});
+["includes", "indexOf", "lastIndexOf"].forEach((method) => {
+    const originMethod = Array.prototype[method];
+    arrayInstrumentations[method] = function(...args) {
+        let res = originMethod.apply(this, args);
+        if (res === false) res = originMethod.apply(this.raw, args);
+        return res;
+    };
+});
 
 function createReactiveObject(obj, { isShallow = false, isReadonly = false }) {
-    obj.raw = obj;
-    return new Proxy(obj, {
+    const existionProxy = reactiveMap.get(obj);
+    if (existionProxy) return existionProxy;
+    const p = new Proxy(obj, {
         get(target, property, receiver) {
             if (property === "raw") return target;
-            if (!isReadonly) track(target, property);
+            if (Array.isArray(target) && arrayInstrumentations.hasOwnProperty(property))
+                return Reflect.get(arrayInstrumentations, property, receiver);
+            if (!isReadonly && typeof property !== "symbol") track(target, property, shouldTrack);
             const res = Reflect.get(target, property, receiver);
             if (isShallow) return res;
             if (typeof res === "object" && res !== null) return isReadonly ? readonly(res) : reactive(res);
@@ -17,10 +41,16 @@ function createReactiveObject(obj, { isShallow = false, isReadonly = false }) {
                 return true;
             }
             const oldVal = target[property];
-            const type = Object.prototype.hasOwnProperty.call(target, property) ? TriggerType.SET : TriggerType.ADD;
+            const type = Array.isArray(target) ?
+                Number(property) < target.length ?
+                TriggerType.SET :
+                TriggerType.ADD :
+                Object.prototype.hasOwnProperty.call(target, property) ?
+                TriggerType.SET :
+                TriggerType.ADD;
             const res = Reflect.set(target, property, newVal, receiver);
             if (target === receiver.raw)
-                if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) trigger(target, property, type);
+                if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) trigger(target, property, type, newVal);
             return res;
         },
         has(target, property) {
@@ -28,7 +58,7 @@ function createReactiveObject(obj, { isShallow = false, isReadonly = false }) {
             return Reflect.has(target, property);
         },
         ownKeys(target) {
-            track(target, ITERATE_KEY);
+            track(target, Array.isArray(target) ? "length" : ITERATE_KEY);
             return Reflect.ownKeys(target);
         },
         deleteProperty(target, property) {
@@ -40,6 +70,8 @@ function createReactiveObject(obj, { isShallow = false, isReadonly = false }) {
             return res;
         },
     });
+    reactiveMap.set(obj, p);
+    return p;
 }
 
 export function reactive(obj) {
