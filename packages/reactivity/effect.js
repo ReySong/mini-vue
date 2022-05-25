@@ -2,6 +2,7 @@ let activeEffect; //  存储被注册的副作用函数，目的是摆脱对副�
 const effectStack = []; //  副作用函数栈
 const bucket = new WeakMap(); //  存储副作用函数的桶
 export const ITERATE_KEY = Symbol();
+export const MAP_KEY_ITERATE_KEY = Symbol();
 export const TriggerType = {
     SET: "SET",
     ADD: "ADD",
@@ -21,7 +22,10 @@ function flushJob() {
             //  添加到微任务队列
             jobQueue.forEach((job) => job());
         })
-        .finally(() => (isFlushing = false));
+        .finally(() => {
+            isFlushing = false;
+            jobQueue.clear();
+        });
 }
 
 export function effect(fn, options = {}) {
@@ -50,7 +54,7 @@ function cleanup(effectFn) {
     effectFn.deps.length = 0;
 }
 
-export function track(target, property, shouldTrack) {
+export function track(target, property, shouldTrack = true) {
     if (!activeEffect || !shouldTrack) return target[property];
     let depsMap = bucket.get(target);
     if (!depsMap) bucket.set(target, (depsMap = new Map()));
@@ -66,7 +70,7 @@ export function trigger(target, property, type, newVal) {
     const effects = depsMap.get(property);
     const effectsToRun = new Set();
 
-    if (type === TriggerType.ADD && Array.isArray(target)) {
+    if (Array.isArray(target) && type === TriggerType.ADD) {
         const lengthEffects = depsMap.get("length");
         lengthEffects &&
             lengthEffects.forEach((effectFn) => {
@@ -84,13 +88,29 @@ export function trigger(target, property, type, newVal) {
         });
     }
 
-    if (type === TriggerType.ADD || type === TriggerType.DELETE) {
+    if (
+        type === TriggerType.ADD ||
+        type === TriggerType.DELETE ||
+        (type === TriggerType.SET && Object.prototype.toString.call(target).slice(8, -1) === "Map")
+    ) {
         const iterateEffects = depsMap.get(ITERATE_KEY);
         iterateEffects &&
             iterateEffects.forEach((effectFn) => {
                 if (effectFn !== activeEffect) effectsToRun.add(effectFn);
             });
     }
+
+    if (
+        (type === TriggerType.ADD || type === TriggerType.DELETE) &&
+        Object.prototype.toString.call(target).slice(8, -1) === "Map"
+    ) {
+        const iterateEffects = depsMap.get(MAP_KEY_ITERATE_KEY);
+        iterateEffects &&
+            iterateEffects.forEach((effectFn) => {
+                if (effectFn !== activeEffect) effectsToRun.add(effectFn);
+            });
+    }
+
     effects &&
         effects.forEach((effectFn) => {
             if (effectFn !== activeEffect) effectsToRun.add(effectFn);
