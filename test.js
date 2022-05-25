@@ -1,17 +1,9 @@
-import { effect } from "./packages/reactivity/index.js";
-import { reactive } from "./packages/reactivity/index.js";
+import { effect } from "./packages/reactivity/effect.js";
+import { reactive } from "./packages/reactivity/reactive.js";
+import { toRefs, proxyRefs } from "./packages/reactivity/ref.js";
 
-const p = reactive(
-    new Map([
-        ["key1", "value1"],
-        ["key2", "value2"],
-    ])
-);
+const obj = reactive({ foo: 1, bar: 2 });
+const newObj = proxyRefs({...toRefs(obj) });
 
-effect(() => {
-    for (const v of p.keys()) {
-        console.log(v);
-    }
-});
-
-p.set("key2", "value3");
+newObj.bar++;
+console.log(newObj.bar);
