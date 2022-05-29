@@ -18,7 +18,9 @@
                 },
                 children: "hello",
             };
-            renderer.render(vnode, document.querySelector("#app"));
+            const app = document.querySelector("#app");
+            renderer.render(vnode, app);
+            renderer.render(null, app);
         </script>
     </body>
 </html>

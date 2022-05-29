@@ -31,7 +31,7 @@ export function createRenderer(options = {}) {
 
     function unmount(vnode) {
         const parent = vnode.el.parentNode;
-        if (parent) parent.removeChild(el);
+        if (parent) parent.removeChild(vnode.el);
     }
 
     return {
