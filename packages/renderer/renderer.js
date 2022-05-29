@@ -3,19 +3,19 @@ export function createRenderer(options = {}) {
 
     function render(vnode, container) {
         if (vnode) patch(container._vnode, vnode, container);
-        else if (container._vnode) container.innerHTML = "";
+        else if (container._vnode) unmount(container._vnode);
         container._vnode = vnode;
     }
 
     function patch(oldVNode, newVNode, container) {
-        if (!oldVNode) mountElement(newVNode, container);
+        if (!oldVNode) mount(newVNode, container);
         else {
             //  打补丁
         }
     }
 
-    function mountElement(vnode, container) {
-        const el = createElement(vnode.type);
+    function mount(vnode, container) {
+        const el = (vnode.el = createElement(vnode.type));
         if (typeof vnode.children === "string") setElementText(el, vnode.children);
         else if (Array.isArray(vnode.children))
             vnode.children.forEach((child) => {
@@ -27,6 +27,11 @@ export function createRenderer(options = {}) {
             }
         }
         insert(el, container);
+    }
+
+    function unmount(vnode) {
+        const parent = vnode.el.parentNode;
+        if (parent) parent.removeChild(el);
     }
 
     return {
