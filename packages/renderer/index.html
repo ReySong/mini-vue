@@ -11,7 +11,13 @@
         <div id="app"></div>
         <script type="module">
             import { renderer } from "./index.js";
-            const vnode = { type: "h1", children: "hello" };
+            const vnode = {
+                type: "h1",
+                props: {
+                    class: ["foo", { bar: true }],
+                },
+                children: "hello",
+            };
             renderer.render(vnode, document.querySelector("#app"));
         </script>
     </body>
