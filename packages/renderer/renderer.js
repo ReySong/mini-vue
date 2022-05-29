@@ -8,9 +8,24 @@ export function createRenderer(options = {}) {
     }
 
     function patch(oldVNode, newVNode, container) {
-        if (!oldVNode) mount(newVNode, container);
-        else {
-            //  打补丁
+        if (oldVNode && oldVNode.type !== newVNode.type) {
+            unmount(oldVNode);
+            oldVNode = null;
+        }
+        const { type } = newVNode;
+        if (typeof type === "string") {
+            if (!oldVNode) mount(newVNode, container);
+            else patchElement(oldVNode, newVNode);
+        } else if (typeof type === "object") {
+            //  处理组件
+        } else if (typeof type === "xxx") {
+            //  处理其他类型的vnode
+        }
+    }
+
+    function patchElement(oldVNode, newVNode) {
+        for (const key in newVNode.props) {
+            patchProps(newVNode.el, key, oldVNode.props[key], newVNode.props[key]);
         }
     }
 
@@ -71,13 +86,32 @@ export const renderer = createRenderer({
         parent.insertBefore(el, anchor);
     },
     patchProps(el, key, prevValue, nextValue) {
-        if (shouldSetAsProps(el, key, nextValue)) {
+        if (/^on/.test(key)) {
+            const invokers = el._vei || (el._vei = {}); //   vue event invoker
+            let invoker = invokers[key];
+            const name = key.slice(2).toLowerCase();
+            if (nextValue) {
+                if (!invoker) {
+                    invoker = el._vei[key] = (e) => {
+                        if (Array.isArray(invoker.value)) {
+                            invoker.value.forEach((fn) => {
+                                fn(e);
+                            });
+                        } else invoker.value(e);
+                    };
+                    invoker.value = nextValue;
+                    el.addEventListener(name, invoker);
+                } else invoker.value = nextValue;
+            } else if (invoker) {
+                el.removeEventListener(name, invoker);
+            }
+        } else if (key === "class") {
+            nextValue = normalizeClass(nextValue);
+            el.className = nextValue;
+        } else if (shouldSetAsProps(el, key, nextValue)) {
             const type = typeof el[key];
             if (type === "boolean" && nextValue === "") el[key] = true;
             else el[key] = nextValue;
-        } else {
-            if (key === "class") nextValue = normalizeClass(nextValue);
-            el.className = nextValue;
         }
     },
 });

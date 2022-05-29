@@ -15,12 +15,14 @@
                 type: "h1",
                 props: {
                     class: ["foo", { bar: true }],
+                    onClick: [() => console.log("clicked1!"), () => console.log("clicked2!")],
                 },
                 children: "hello",
             };
             const app = document.querySelector("#app");
             renderer.render(vnode, app);
-            renderer.render(null, app);
+            // vnode.props.onClick = null;
+            // renderer.render(vnode, app);
         </script>
     </body>
 </html>
