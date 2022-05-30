@@ -101,6 +101,7 @@ export const renderer = createRenderer({
             if (nextValue) {
                 if (!invoker) {
                     invoker = el._vei[key] = (e) => {
+                        if (e.timeStamp < invoker.attached) return;
                         if (Array.isArray(invoker.value)) {
                             invoker.value.forEach((fn) => {
                                 fn(e);
@@ -108,6 +109,7 @@ export const renderer = createRenderer({
                         } else invoker.value(e);
                     };
                     invoker.value = nextValue;
+                    invoker.attached = performance.now();
                     el.addEventListener(name, invoker);
                 } else invoker.value = nextValue;
             } else if (invoker) {
