@@ -24,8 +24,16 @@ export function createRenderer(options = {}) {
     }
 
     function patchElement(oldVNode, newVNode) {
-        for (const key in newVNode.props) {
-            patchProps(newVNode.el, key, oldVNode.props[key], newVNode.props[key]);
+        const el = (newVNode.el = oldVNode.el);
+        const oldProps = oldVNode.props;
+        const newProps = newVNode.props;
+        for (const key in newProps) {
+            if (newProps[key] !== oldProps[key]) {
+                patchProps(el, key, oldProps[key], newProps[key]);
+            }
+        }
+        for (const key in oldProps) {
+            if (!(key in newProps)) patchProps(el, key, oldProps[key], null);
         }
     }
 
