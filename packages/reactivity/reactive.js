@@ -33,7 +33,7 @@ const reactiveMap = new Map();
 const arrayInstrumentations = {};
 ["push", "pop", "unshift", "shift", "splice"].forEach((method) => {
     const originMethod = Array.prototype[method];
-    arrayInstrumentations[method] = function(...args) {
+    arrayInstrumentations[method] = function (...args) {
         shouldTrack = false;
         let res = originMethod.apply(this, args);
         shouldTrack = true;
@@ -42,7 +42,7 @@ const arrayInstrumentations = {};
 });
 ["includes", "indexOf", "lastIndexOf"].forEach((method) => {
     const originMethod = Array.prototype[method];
-    arrayInstrumentations[method] = function(...args) {
+    arrayInstrumentations[method] = function (...args) {
         let res = originMethod.apply(this, args);
         if (res === false) res = originMethod.apply(this[raw], args);
         return res;
@@ -50,10 +50,10 @@ const arrayInstrumentations = {};
 });
 
 function iterationMethod(itrType) {
-    return function() {
+    return function () {
         const target = this[raw];
         const wrap = (val) => (typeof val === "object" ? reactive(val) : val);
-        const itr = (function(itrType) {
+        const itr = (function (itrType) {
             switch (itrType) {
                 case "entries":
                     return target[Symbol.iterator]();
@@ -141,7 +141,7 @@ function createReactiveObject(obj, { isShallow = false, isReadonly = false }) {
     let p;
     const baseHandler = {
         get(target, property, receiver) {
-            if (property === "raw") return target;
+            if (property === raw) return target;
             if (Array.isArray(target) && arrayInstrumentations.hasOwnProperty(property))
                 return Reflect.get(arrayInstrumentations, property, receiver);
             if (!isReadonly && typeof property !== "symbol") track(target, property, shouldTrack);
@@ -156,16 +156,17 @@ function createReactiveObject(obj, { isShallow = false, isReadonly = false }) {
                 return true;
             }
             const oldVal = target[property];
-            const type = Array.isArray(target) ?
-                Number(property) < target.length ?
-                TriggerType.SET :
-                TriggerType.ADD :
-                Object.prototype.hasOwnProperty.call(target, property) ?
-                TriggerType.SET :
-                TriggerType.ADD;
+            const type = Array.isArray(target)
+                ? Number(property) < target.length
+                    ? TriggerType.SET
+                    : TriggerType.ADD
+                : Object.prototype.hasOwnProperty.call(target, property)
+                ? TriggerType.SET
+                : TriggerType.ADD;
             const res = Reflect.set(target, property, newVal, receiver);
             if (target === receiver[raw])
-                if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) trigger(target, property, type, newVal);
+                if (oldVal !== newVal && oldVal === oldVal && newVal === newVal)
+                    trigger(target, property, type, newVal);
             return res;
         },
         has(target, property) {
