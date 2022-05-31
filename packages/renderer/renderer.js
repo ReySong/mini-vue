@@ -35,6 +35,31 @@ export function createRenderer(options = {}) {
         for (const key in oldProps) {
             if (!(key in newProps)) patchProps(el, key, oldProps[key], null);
         }
+        patchChildren(oldVNode, newVNode, el);
+    }
+
+    function patchChildren(oldVNode, newVNode, container) {
+        if (typeof newVNode.children === "string") {
+            if (Array.isArray(oldVNode.children)) {
+                oldVNode.children.forEach((c) => unmount(c));
+            }
+            setElementText(container, newVNode.children);
+        } else if (Array.isArray(newVNode.children)) {
+            if (Array.isArray(oldVNode.children)) {
+                //  Diff算法
+                oldVNode.children.forEach((c) => unmount(c));
+                newVNode.children.forEach((c) => patch(null, c, container));
+            } else {
+                setElementText(container, "");
+                newVNode.children.forEach((c) => patch(null, c, container));
+            }
+        } else {
+            if (Array.isArray(oldVNode.children)) {
+                oldVNode.children.forEach((c) => unmount(c));
+            } else if (typeof oldVNode.children === "string") {
+                setElementText(container, "");
+            }
+        }
     }
 
     function mount(vnode, container) {
@@ -62,7 +87,7 @@ export function createRenderer(options = {}) {
     };
 }
 
-function shouldSetAsProps(el, key, value) {
+function shouldSetAsProps(el, key) {
     if (key === "from" && el.tagName === "INPUT") return false;
     return key in el;
 }
@@ -118,7 +143,7 @@ export const renderer = createRenderer({
         } else if (key === "class") {
             nextValue = normalizeClass(nextValue);
             el.className = nextValue;
-        } else if (shouldSetAsProps(el, key, nextValue)) {
+        } else if (shouldSetAsProps(el, key)) {
             const type = typeof el[key];
             if (type === "boolean" && nextValue === "") el[key] = true;
             else el[key] = nextValue;
