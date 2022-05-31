@@ -10,34 +10,16 @@
     <body>
         <div id="app"></div>
         <script type="module">
-            import { renderer } from "./index.js";
+            import { Comment, renderer } from "./index.js";
             const vnode = {
-                type: "div",
-                props: {
-                    id: "parent",
-                },
-                children: [
-                    {
-                        type: "p",
-                        children: "text",
-                    },
-                ],
+                type: Comment,
+                children: "我是注释节点",
             };
             const app = document.querySelector("#app");
             renderer.render(vnode, app);
             const vnode2 = {
-                type: "div",
-                props: {
-                    id: "parent",
-                },
-                children: [
-                    {
-                        type: "input",
-                        props: {
-                            value: "请输入关键字",
-                        },
-                    },
-                ],
+                type: Comment,
+                children: "我是注释节点2",
             };
             renderer.render(vnode2, app);
         </script>

@@ -1,5 +1,8 @@
+export const Text = Symbol();
+export const Comment = Symbol();
+
 export function createRenderer(options = {}) {
-    const { createElement, setElementText, insert, patchProps } = options;
+    const { createElement, createTextNode, createCommentNode, setElementText, setText, insert, patchProps } = options;
 
     function render(vnode, container) {
         if (vnode) patch(container._vnode, vnode, container);
@@ -16,6 +19,22 @@ export function createRenderer(options = {}) {
         if (typeof type === "string") {
             if (!oldVNode) mount(newVNode, container);
             else patchElement(oldVNode, newVNode);
+        } else if (type === Text) {
+            if (!oldVNode) {
+                const el = (newVNode.el = createTextNode(newVNode.children));
+                insert(el, container);
+            } else {
+                const el = (newVNode.el = oldVNode.el);
+                if (newVNode.children !== oldVNode.children) setText(el, newVNode.children);
+            }
+        } else if (type === Comment) {
+            if (!oldVNode) {
+                const el = (newVNode.el = createCommentNode(newVNode.children));
+                insert(el, container);
+            } else {
+                const el = (newVNode.el = oldVNode.el);
+                if (newVNode.children !== oldVNode.children) setText(el, newVNode.children);
+            }
         } else if (typeof type === "object") {
             //  处理组件
         } else if (typeof type === "xxx") {
@@ -111,6 +130,15 @@ function normalizeClass(value) {
 export const renderer = createRenderer({
     createElement(tag) {
         return document.createElement(tag);
+    },
+    createTextNode(text) {
+        return document.createTextNode(text);
+    },
+    createCommentNode(text) {
+        return document.createComment(text);
+    },
+    setText(el, text) {
+        el.nodeValue = text;
     },
     setElementText(el, text) {
         el.textContent = text;

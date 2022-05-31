@@ -1,1 +1,1 @@
-export { createRenderer, renderer } from "./renderer.js";
+export { Text, Comment, createRenderer, renderer } from "./renderer.js";
