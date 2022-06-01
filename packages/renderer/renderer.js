@@ -73,7 +73,8 @@ export function createRenderer(options = {}) {
             setElementText(container, n2.children);
         } else if (Array.isArray(n2.children)) {
             if (Array.isArray(n1.children)) {
-                //  Diff算法
+                patchKeyedChildren(n1, n2, container);
+                /* 简单 Diff 算法
                 const oldChildren = n1.children;
                 const newChildren = n2.children;
                 let lastIndex = 0;
@@ -107,7 +108,7 @@ export function createRenderer(options = {}) {
                         else anchor = container.firstChild;
                         patch(null, newVNode, container, anchor);
                     }
-                }
+                }   */
             } else {
                 setElementText(container, "");
                 n2.children.forEach((c) => patch(null, c, container));
@@ -117,6 +118,67 @@ export function createRenderer(options = {}) {
                 n1.children.forEach((c) => unmount(c));
             } else if (typeof n1.children === "string") {
                 setElementText(container, "");
+            }
+        }
+    }
+
+    function patchKeyedChildren(n1, n2, container) {
+        //  双端Diff算法
+
+        const oldChildren = n1.children;
+        const newChildren = n2.children;
+        let oldStartIdx = 0;
+        let oldEndIdx = oldChildren.length - 1;
+        let newStartIdx = 0;
+        let newEndIdx = newChildren.length - 1;
+        let oldStartVNode = oldChildren[oldStartIdx];
+        let oldEndVNode = oldChildren[oldEndIdx];
+        let newStartVNode = newChildren[newStartIdx];
+        let newEndVNode = newChildren[newEndIdx];
+
+        while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+            if (!oldStartVNode) {
+                oldStartVNode = oldChildren[++oldStartIdx];
+            } else if (!oldEndVNode) {
+                oldEndVNode = oldChildren[--oldEndIdx];
+            } else if (oldStartVNode.key === newStartVNode.key) {
+                patch(oldStartVNode, newStartVNode, container);
+                oldStartVNode = oldChildren[++oldStartIdx];
+                newStartVNode = newChildren[++newStartIdx];
+            } else if (oldEndVNode.key === newEndVNode.key) {
+                patch(oldEndVNode, newEndVNode, container);
+                oldEndVNode = oldChildren[--oldEndIdx];
+                newEndVNode = newChildren[--newEndIdx];
+            } else if (oldStartVNode.key === newEndVNode.key) {
+                patch(oldStartVNode, newEndVNode, container);
+                insert(oldStartVNode.el, container, oldEndVNode.el.nextSibling);
+                oldStartVNode = oldChildren[++oldStartIdx];
+                newEndVNode = newChildren[--newEndIdx];
+            } else if (oldEndVNode.key === newStartVNode.key) {
+                patch(oldEndVNode, newStartVNode, container);
+                insert(oldEndVNode.el, container, oldStartVNode.el);
+                oldEndVNode = oldChildren[--oldEndIdx];
+                newStartVNode = newChildren[++newStartIdx];
+            } else {
+                const idxInOld = oldChildren.findIndex((node) => node.key === newStartVNode.key);
+                if (idxInOld > 0) {
+                    const vnodeToMove = oldChildren[idxInOld];
+                    patch(vnodeToMove, newStartVNode, container);
+                    insert(vnodeToMove.el, container, oldStartVNode.el);
+                    oldChildren[idxInOld] = undefined;
+                } else {
+                    patch(null, newStartVNode, container, oldStartVNode.el);
+                }
+                newStartVNode = newChildren[++newStartIdx];
+            }
+        }
+        if (oldStartIdx > oldEndIdx && newStartIdx <= newEndIdx) {
+            for (let i = newStartIdx; i <= newEndIdx; ++i) {
+                patch(null, newChildren[i], container, oldStartVNode.el);
+            }
+        } else if (oldStartIdx <= oldEndIdx && newStartIdx > newEndIdx) {
+            for (let i = oldStartIdx; i <= oldEndIdx; ++i) {
+                unmount(oldChildren[i]);
             }
         }
     }
