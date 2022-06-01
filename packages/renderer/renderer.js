@@ -123,8 +123,96 @@ export function createRenderer(options = {}) {
     }
 
     function patchKeyedChildren(n1, n2, container) {
-        //  双端Diff算法
+        //  快速 Diff 算法
 
+        const oldChildren = n1.children;
+        const newChildren = n2.children;
+
+        let index = 0;
+        let oldVNode = oldChildren[index];
+        let newVNode = newChildren[index];
+        while (oldVNode.key === newVNode.key) {
+            patch(oldVNode, newVNode, container);
+            ++index;
+            oldVNode = oldChildren[index];
+            newVNode = newChildren[index];
+        }
+        let oldEnd = oldChildren.length - 1;
+        let newEnd = newChildren.length - 1;
+        oldVNode = oldChildren[oldEnd];
+        newVNode = newChildren[newEnd];
+        while (oldVNode.key === newVNode.key) {
+            patch(oldVNode, newVNode, container);
+            --oldEnd;
+            --newEnd;
+            oldVNode = oldChildren[oldEnd];
+            newVNode = newChildren[newEnd];
+        }
+
+        if (index > oldEnd && index <= newEnd) {
+            const anchorIndex = newEnd + 1;
+            const anchor = anchorIndex < newChildren.length ? newChildren[anchorIndex].el : null;
+            while (index <= newEnd) {
+                patch(null, newChildren[index++], container, anchor);
+            }
+        } else if (index <= oldEnd && index > newEnd) {
+            while (index <= oldEnd) {
+                unmount(oldChildren[index++]);
+            }
+        } else {
+            const count = newEnd - index + 1;
+            const source = new Array(count).fill(-1); //  记录所有 key 值与旧节点对应的新节点位置
+            const oldStart = index;
+            const newStart = index;
+            const keyIndex = new Map();
+            let moved = false,
+                pos = 0,
+                patched = 0; //  已经更新过的节点数量
+            for (let i = newStart; i <= newEnd; ++i) {
+                keyIndex.set(newChildren[i].key, i);
+            }
+            for (let i = oldStart; i <= oldEnd; ++i) {
+                oldVNode = oldChildren[i];
+                if (patched <= count) {
+                    const k = keyIndex.get(oldVNode.key);
+                    if (typeof k !== "undefined") {
+                        newVNode = newChildren[k];
+                        patch(oldVNode, newVNode, container);
+                        ++patched;
+                        source[k - newStart] = i;
+                        if (k < pos) {
+                            moved = true;
+                        } else {
+                            pos = k;
+                        }
+                    } else {
+                        unmount(oldVNode);
+                    }
+                } else {
+                    unmount(oldVNode);
+                }
+            }
+            if (moved) {
+                const seq = lis(source);
+                let s = seq.length - 1;
+                let i = count - 1;
+                for (i; i >= 0; --i) {
+                    const pos = i + newStart;
+                    const newVNode = newChildren[pos];
+                    const nextPos = pos + 1;
+                    const anchor = nextPos < newChildren.length ? newChildren[nextPos].el : null;
+                    if (source[i] === -1) {
+                        //  新节点，需要挂载
+                        patch(null, newVNode, container, anchor);
+                    } else if (i !== seq[s]) {
+                        // i 不在最长递增子序列中，需要移动
+                        insert(newVNode.el, container, anchor);
+                    } else --s;
+                }
+            }
+        }
+
+        /*  双端 Diff 算法
         const oldChildren = n1.children;
         const newChildren = n2.children;
         let oldStartIdx = 0;
@@ -180,7 +268,7 @@ export function createRenderer(options = {}) {
             for (let i = oldStartIdx; i <= oldEndIdx; ++i) {
                 unmount(oldChildren[i]);
             }
-        }
+        }   */
     }
 
     function mount(vnode, container, anchor) {
@@ -215,6 +303,47 @@ export function createRenderer(options = {}) {
 function shouldSetAsProps(el, key) {
     if (key === "from" && el.tagName === "INPUT") return false;
     return key in el;
+}
+
+function lis(arr) {
+    const p = arr.slice();
+    const result = [0];
+    let i, j, u, v, c;
+    const len = arr.length;
+    for (i = 0; i < len; i++) {
+        const arrI = arr[i];
+        if (arrI !== 0) {
+            j = result[result.length - 1];
+            if (arr[j] < arrI) {
+                p[i] = j;
+                result.push(i);
+                continue;
+            }
+            u = 0;
+            v = result.length - 1;
+            while (u < v) {
+                c = ((u + v) / 2) | 0;
+                if (arr[result[c]] < arrI) {
+                    u = c + 1;
+                } else {
+                    v = c;
+                }
+            }
+            if (arrI < arr[result[u]]) {
+                if (u > 0) {
+                    p[i] = result[u - 1];
+                }
+                result[u] = i;
+            }
+        }
+    }
+    u = result.length;
+    v = result[u - 1];
+    while (u-- > 0) {
+        result[u] = v;
+        v = p[v];
+    }
+    return result;
 }
 
 function normalizeClass(value) {
