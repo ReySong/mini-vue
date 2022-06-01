@@ -1,5 +1,6 @@
 export const Text = Symbol();
 export const Comment = Symbol();
+export const Fragment = Symbol();
 
 export function createRenderer(options = {}) {
     const { createElement, createTextNode, createCommentNode, setElementText, setText, insert, patchProps } = options;
@@ -35,10 +36,14 @@ export function createRenderer(options = {}) {
                 const el = (newVNode.el = oldVNode.el);
                 if (newVNode.children !== oldVNode.children) setText(el, newVNode.children);
             }
+        } else if (type === Fragment) {
+            if (!oldVNode)
+                newVNode.children.forEach((c) => {
+                    patch(null, c, container);
+                });
+            else patchChildren(oldVNode, newVNode, container);
         } else if (typeof type === "object") {
             //  处理组件
-        } else if (typeof type === "xxx") {
-            //  处理其他类型的vnode
         }
     }
 
@@ -97,6 +102,10 @@ export function createRenderer(options = {}) {
     }
 
     function unmount(vnode) {
+        if (vnode.type === Fragment) {
+            vnode.children.forEach((c) => unmount(c));
+            return;
+        }
         const parent = vnode.el.parentNode;
         if (parent) parent.removeChild(vnode.el);
     }
