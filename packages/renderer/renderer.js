@@ -6,51 +6,54 @@ export function createRenderer(options = {}) {
     const { createElement, createTextNode, createCommentNode, setElementText, setText, insert, patchProps } = options;
 
     function render(vnode, container) {
+        let display = container.style.display;
+        container.style.display = "none"; //  DOM 离线
         if (vnode) patch(container._vnode, vnode, container);
         else if (container._vnode) unmount(container._vnode);
         container._vnode = vnode;
+        container.style.display = display;
     }
 
-    function patch(oldVNode, newVNode, container) {
-        if (oldVNode && oldVNode.type !== newVNode.type) {
-            unmount(oldVNode);
-            oldVNode = null;
+    function patch(n1, n2, container, anchor) {
+        if (n1 && n1.type !== n2.type) {
+            unmount(n1);
+            n1 = null;
         }
-        const { type } = newVNode;
+        const { type } = n2;
         if (typeof type === "string") {
-            if (!oldVNode) mount(newVNode, container);
-            else patchElement(oldVNode, newVNode);
+            if (!n1) mount(n2, container, anchor);
+            else patchElement(n1, n2);
         } else if (type === Text) {
-            if (!oldVNode) {
-                const el = (newVNode.el = createTextNode(newVNode.children));
+            if (!n1) {
+                const el = (n2.el = createTextNode(n2.children));
                 insert(el, container);
             } else {
-                const el = (newVNode.el = oldVNode.el);
-                if (newVNode.children !== oldVNode.children) setText(el, newVNode.children);
+                const el = (n2.el = n1.el);
+                if (n2.children !== n1.children) setText(el, n2.children);
             }
         } else if (type === Comment) {
-            if (!oldVNode) {
-                const el = (newVNode.el = createCommentNode(newVNode.children));
+            if (!n1) {
+                const el = (n2.el = createCommentNode(n2.children));
                 insert(el, container);
             } else {
-                const el = (newVNode.el = oldVNode.el);
-                if (newVNode.children !== oldVNode.children) setText(el, newVNode.children);
+                const el = (n2.el = n1.el);
+                if (n2.children !== n1.children) setText(el, n2.children);
             }
         } else if (type === Fragment) {
-            if (!oldVNode)
-                newVNode.children.forEach((c) => {
+            if (!n1)
+                n2.children.forEach((c) => {
                     patch(null, c, container);
                 });
-            else patchChildren(oldVNode, newVNode, container);
+            else patchChildren(n1, n2, container);
         } else if (typeof type === "object") {
             //  处理组件
         }
     }
 
-    function patchElement(oldVNode, newVNode) {
-        const el = (newVNode.el = oldVNode.el);
-        const oldProps = oldVNode.props;
-        const newProps = newVNode.props;
+    function patchElement(n1, n2) {
+        const el = (n2.el = n1.el);
+        const oldProps = n1.props;
+        const newProps = n2.props;
         for (const key in newProps) {
             if (newProps[key] !== oldProps[key]) {
                 patchProps(el, key, oldProps[key], newProps[key]);
@@ -59,34 +62,66 @@ export function createRenderer(options = {}) {
         for (const key in oldProps) {
             if (!(key in newProps)) patchProps(el, key, oldProps[key], null);
         }
-        patchChildren(oldVNode, newVNode, el);
+        patchChildren(n1, n2, el);
     }
 
-    function patchChildren(oldVNode, newVNode, container) {
-        if (typeof newVNode.children === "string") {
-            if (Array.isArray(oldVNode.children)) {
-                oldVNode.children.forEach((c) => unmount(c));
+    function patchChildren(n1, n2, container) {
+        if (typeof n2.children === "string") {
+            if (Array.isArray(n1.children)) {
+                n1.children.forEach((c) => unmount(c));
             }
-            setElementText(container, newVNode.children);
-        } else if (Array.isArray(newVNode.children)) {
-            if (Array.isArray(oldVNode.children)) {
+            setElementText(container, n2.children);
+        } else if (Array.isArray(n2.children)) {
+            if (Array.isArray(n1.children)) {
                 //  Diff算法
-                oldVNode.children.forEach((c) => unmount(c));
-                newVNode.children.forEach((c) => patch(null, c, container));
+                const oldChildren = n1.children;
+                const newChildren = n2.children;
+                let lastIndex = 0;
+                for (let i = 0; i < newChildren.length; ++i) {
+                    const newVNode = newChildren[i];
+                    let find = false;
+                    for (let j = 0; j < oldChildren.length; ++j) {
+                        const oldVNode = oldChildren[j];
+                        if (newVNode.key === oldVNode.key) {
+                            find = true;
+                            patch(oldVNode, newVNode, container);
+                            if (j < lastIndex) {
+                                const prevVNode = newChildren[i - 1];
+                                if (prevVNode) {
+                                    const anchor = prevVNode.el.nextSibling;
+                                    insert(newVNode.el, container, anchor);
+                                }
+                            } else lastIndex = j;
+                            break;
+                        }
+                    }
+                    for (let i = 0; i < oldChildren.length; ++i) {
+                        const oldVNode = oldChildren[i];
+                        const has = newChildren.find((vnode) => vnode.key === oldVNode.key);
+                        if (!has) unmount(oldVNode);
+                    }
+                    if (!find) {
+                        const prevVNode = newChildren[i - 1];
+                        let anchor = null;
+                        if (prevVNode) anchor = prevVNode.el.nextSibling;
+                        else anchor = container.firstChild;
+                        patch(null, newVNode, container, anchor);
+                    }
+                }
             } else {
                 setElementText(container, "");
-                newVNode.children.forEach((c) => patch(null, c, container));
+                n2.children.forEach((c) => patch(null, c, container));
             }
         } else {
-            if (Array.isArray(oldVNode.children)) {
-                oldVNode.children.forEach((c) => unmount(c));
-            } else if (typeof oldVNode.children === "string") {
+            if (Array.isArray(n1.children)) {
+                n1.children.forEach((c) => unmount(c));
+            } else if (typeof n1.children === "string") {
                 setElementText(container, "");
             }
         }
     }
 
-    function mount(vnode, container) {
+    function mount(vnode, container, anchor) {
         const el = (vnode.el = createElement(vnode.type));
         if (typeof vnode.children === "string") setElementText(el, vnode.children);
         else if (Array.isArray(vnode.children))
@@ -98,7 +133,7 @@ export function createRenderer(options = {}) {
                 patchProps(el, key, null, vnode.props[key]);
             }
         }
-        insert(el, container);
+        insert(el, container, anchor);
     }
 
     function unmount(vnode) {

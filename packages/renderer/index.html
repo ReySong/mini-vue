@@ -12,15 +12,25 @@
         <script type="module">
             import { Fragment, renderer } from "./index.js";
             const vnode = {
-                type: Fragment,
+                type: "div",
                 children: [
-                    { type: "li", children: "text 1" },
-                    { type: "li", children: "text 2" },
-                    { type: "li", children: "text 3" },
+                    { type: "p", children: "1", key: "1" },
+                    { type: "p", children: "2", key: "2" },
+                    { type: "p", children: "Hello", key: "3" },
+                    { type: "p", children: "World", key: "4" },
                 ],
             };
             const app = document.querySelector("#app");
             renderer.render(vnode, app);
+            const vnode2 = {
+                type: "div",
+                children: [
+                    { type: "p", children: "1", key: "1" },
+                    { type: "p", children: "2", key: "2" },
+                    { type: "p", children: "Hello", key: "4" },
+                ],
+            };
+            renderer.render(vnode2, app);
         </script>
     </body>
 </html>
