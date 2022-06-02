@@ -47,6 +47,11 @@ export function createRenderer(options = {}) {
             else patchChildren(n1, n2, container);
         } else if (typeof type === "object") {
             //  处理组件
+            if (!n1) {
+                // mountComponent(n2, container, anchor);
+            } else {
+                // patchComponent(n1, n2, anchor);
+            }
         }
     }
 
