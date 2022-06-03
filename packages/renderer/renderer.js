@@ -4,6 +4,20 @@ export const Text = Symbol();
 export const Comment = Symbol();
 export const Fragment = Symbol();
 
+let currentInstance = null;
+function setCurrentInstance(instance) {
+    currentInstance = instance;
+}
+const lifeCycleHooks = {};
+["beforeMount", "mounted", "beforeUpdate", "updated"].forEach((method) => {
+    let register = `on${method[0].toUpperCase() + method.slice(1)}`;
+    lifeCycleHooks[register] = (fn) => {
+        if (currentInstance) currentInstance[method].push(fn);
+        else console.error(register + "can only be called in the setup function!");
+    };
+});
+export const { onBeforeMount, onMounted, onBeforeUpdate, onUpdated } = lifeCycleHooks;
+
 const queue = new Set();
 let isFlushing = false;
 const p = Promise.resolve();
@@ -79,19 +93,9 @@ export function createRenderer(options = {}) {
     function mountComponent(vnode, container, anchor) {
         const componentOptions = vnode.type;
         let { render } = componentOptions;
-        const {
-            data,
-            setup,
-            props: propsOption,
-            beforeCreate,
-            created,
-            beforeMount,
-            mounted,
-            beforeUpdate,
-            updated,
-        } = componentOptions;
+        const { data, setup, beforeCreate, created, props: propsOption } = componentOptions;
 
-        beforeCreate && beforeCreate(); //  调用生命周期钩子
+        beforeCreate && beforeCreate().forEach((hook) => hook()); //  调用生命周期钩子
 
         const state = data ? reactive(data()) : null;
         const [props, attrs] = resolveProps(propsOption, vnode.props);
@@ -104,6 +108,10 @@ export function createRenderer(options = {}) {
             isMounted: false,
             subTree: null,
             slots,
+            beforeMount: [],
+            mounted: [],
+            beforeUpdate: [],
+            updated: [],
         };
 
         function emit(event, ...payload) {
@@ -112,9 +120,10 @@ export function createRenderer(options = {}) {
             if (handler) handler(...payload);
             else console.warn("event is not exist!");
         }
-
         const setupContent = { attrs, emit, slots };
+        setCurrentInstance(instance);
         const setupResult = setup(shallowReadonly(instance.props), setupContent);
+        setCurrentInstance(null);
         let setupState = null; //  用来存储 setup 返回的数据
         if (typeof setupResult === "function") {
             if (render) {
@@ -155,20 +164,20 @@ export function createRenderer(options = {}) {
             },
         });
 
-        created && created().call(renderContext); //  调用生命周期钩子
+        created && created().forEach((hook) => hook.call(renderContext)); //  调用生命周期钩子
 
         effect(
             () => {
                 const subTree = render.call(renderContext, renderContext); //  render 函数内部可以通过this访问自身状态数据
                 if (!instance.isMounted) {
-                    beforeMount && beforeMount().call(renderContext); //  调用生命周期钩子
+                    instance.beforeMount && instance.beforeMount.forEach((hook) => hook.call(renderContext)); //  调用生命周期钩子
                     patch(null, subTree, container, anchor);
                     instance.isMounted = true;
-                    mounted && mounted(); //  调用生命周期钩子
+                    instance.mounted && instance.mounted.forEach((hook) => hook.call(renderContext)); //  调用生命周期钩子
                 } else {
-                    beforeUpdate && beforeUpdate().call(renderContext); //  调用生命周期钩子
+                    instance.beforeUpdate && instance.beforeUpdate.forEach((hook) => hook.call(renderContext)); //  调用生命周期钩子
                     patch(instance.subTree, subTree, container, anchor);
-                    updated && updated().call(renderContext); //  调用生命周期钩子
+                    instance.updated && instance.updated.forEach((hook) => hook.call(renderContext)); //  调用生命周期钩子
                 }
                 instance.subTree = subTree;
             },

@@ -10,7 +10,7 @@
     <body>
         <div id="app"></div>
         <script type="module">
-            import { renderer, Fragment } from "./index.js";
+            import { renderer, Fragment, onMounted } from "./index.js";
             const MyComponent = {
                 name: "MyComponent",
                 data() {
@@ -19,7 +19,10 @@
                     };
                 },
                 setup(props, { emit, slot }) {
-                    emit("change", props.title);
+                    onMounted(() => {
+                        console.log(123);
+                    }),
+                        emit("change", props.title);
                     return {};
                 },
                 render() {
