@@ -1,4 +1,4 @@
-import { reactive, shallowReactive, effect } from "../reactivity/index.js";
+import { reactive, shallowReactive, shallowReadonly, effect } from "../reactivity/index.js";
 
 export const Text = Symbol();
 export const Comment = Symbol();
@@ -81,6 +81,7 @@ export function createRenderer(options = {}) {
         const {
             render,
             data,
+            setup,
             props: propsOption,
             beforeCreate,
             created,
@@ -92,8 +93,9 @@ export function createRenderer(options = {}) {
 
         beforeCreate && beforeCreate(); //  调用生命周期钩子
 
-        const state = reactive(data());
+        const state = data ? reactive(data()) : null;
         const [props, attrs] = resolveProps(propsOption, vnode.props);
+
         const instance = {
             //  组件实例
             state,
@@ -101,6 +103,16 @@ export function createRenderer(options = {}) {
             isMounted: false,
             subTree: null,
         };
+
+        const setupContent = { attrs };
+        const setupResult = setup(shallowReadonly(instance.props), setupContent);
+        let setupState = null; //  用来存储 setup 返回的数据
+        if (typeof setupResult === "function") {
+            if (render) {
+                console.error("setup function returns render function, the render option will be ignore!");
+                render = setupResult;
+            } else setupState = setupResult;
+        }
         vnode.component = instance;
 
         const renderContext = new Proxy(instance, {
@@ -110,6 +122,8 @@ export function createRenderer(options = {}) {
                     return state[k];
                 } else if (k in props) {
                     return props[k];
+                } else if (setupState && key in setupState) {
+                    return setupState[k];
                 } else {
                     console.error("property do not exist");
                 }
@@ -120,6 +134,8 @@ export function createRenderer(options = {}) {
                     state[k] = v;
                 } else if (k in props) {
                     props[k] = v;
+                } else if (setupState && key in setupState) {
+                    setupState[k] = v;
                 } else {
                     console.error("property do not exist");
                     return false;

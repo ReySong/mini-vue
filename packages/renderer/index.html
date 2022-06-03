@@ -18,6 +18,10 @@
                         foo: 1,
                     };
                 },
+                setup(props, setupContext) {
+                    console.log(props.title);
+                    const { slot, emit, attrs, expose } = setupContext;
+                },
                 render() {
                     return {
                         type: "div",
