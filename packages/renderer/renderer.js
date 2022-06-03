@@ -104,7 +104,14 @@ export function createRenderer(options = {}) {
             subTree: null,
         };
 
-        const setupContent = { attrs };
+        function emit(event, ...payload) {
+            const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
+            const handler = instance.props[eventName];
+            if (handler) handler(...payload);
+            else console.warn("event is not exist!");
+        }
+
+        const setupContent = { attrs, emit };
         const setupResult = setup(shallowReadonly(instance.props), setupContent);
         let setupState = null; //  用来存储 setup 返回的数据
         if (typeof setupResult === "function") {
@@ -113,6 +120,7 @@ export function createRenderer(options = {}) {
                 render = setupResult;
             } else setupState = setupResult;
         }
+
         vnode.component = instance;
 
         const renderContext = new Proxy(instance, {
@@ -169,7 +177,7 @@ export function createRenderer(options = {}) {
         const props = {};
         const attrs = {};
         for (const key in propsData) {
-            if (key in options) props[key] = propsData[key];
+            if (key in options || key.startsWith("on")) props[key] = propsData[key];
             else attrs[key] = propsData[key];
         }
         return [props, attrs];

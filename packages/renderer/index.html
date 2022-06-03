@@ -20,13 +20,8 @@
                 },
                 setup(props, { emit }) {
                     console.log(props.title);
-                    // emit("change", 1, 2);
-                    return () => {
-                        return {
-                            type: "div",
-                            children: props.title,
-                        };
-                    };
+                    emit("change", 1, 2);
+                    return {};
                 },
                 render() {
                     return {
