@@ -10,7 +10,7 @@
     <body>
         <div id="app"></div>
         <script type="module">
-            import { renderer } from "./index.js";
+            import { renderer, Fragment } from "./index.js";
             const MyComponent = {
                 name: "MyComponent",
                 data() {
@@ -18,18 +18,14 @@
                         foo: 1,
                     };
                 },
-                setup(props, { emit }) {
-                    console.log(props.title);
-                    emit("change", 1, 2);
+                setup(props, { emit, slot }) {
+                    emit("change", props.title);
                     return {};
                 },
                 render() {
                     return {
-                        type: "div",
-                        children: this.title,
-                        props: {
-                            onClick: () => (this.title = "Clicked!"),
-                        },
+                        type: Fragment,
+                        children: [this.$slots.header(), this.$slots.body(), this.$slots.footer()],
                     };
                 },
             };
@@ -41,6 +37,20 @@
                 type: MyComponent,
                 props: {
                     title: "A big Title",
+                    onChange: (val) => {
+                        console.log(val);
+                    },
+                },
+                children: {
+                    header() {
+                        return { type: "h1", children: "我是标题" };
+                    },
+                    body() {
+                        return { type: "section", children: "我是内容" };
+                    },
+                    footer() {
+                        return { type: "p", children: "我是注脚" };
+                    },
                 },
             };
 

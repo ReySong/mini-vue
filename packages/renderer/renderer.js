@@ -95,6 +95,7 @@ export function createRenderer(options = {}) {
 
         const state = data ? reactive(data()) : null;
         const [props, attrs] = resolveProps(propsOption, vnode.props);
+        const slots = vnode.children || {};
 
         const instance = {
             //  组件实例
@@ -102,6 +103,7 @@ export function createRenderer(options = {}) {
             props: shallowReactive(props),
             isMounted: false,
             subTree: null,
+            slots,
         };
 
         function emit(event, ...payload) {
@@ -111,7 +113,7 @@ export function createRenderer(options = {}) {
             else console.warn("event is not exist!");
         }
 
-        const setupContent = { attrs, emit };
+        const setupContent = { attrs, emit, slots };
         const setupResult = setup(shallowReadonly(instance.props), setupContent);
         let setupState = null; //  用来存储 setup 返回的数据
         if (typeof setupResult === "function") {
@@ -125,7 +127,8 @@ export function createRenderer(options = {}) {
 
         const renderContext = new Proxy(instance, {
             get(t, k) {
-                const { state, props } = t;
+                const { state, props, slots } = t;
+                if (k === "$slots") return slots;
                 if (state && k in state) {
                     return state[k];
                 } else if (k in props) {
