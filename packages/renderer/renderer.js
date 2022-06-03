@@ -1,6 +1,27 @@
+import { reactive, effect } from "../reactivity/index.js";
+
 export const Text = Symbol();
 export const Comment = Symbol();
 export const Fragment = Symbol();
+
+const queue = new Set();
+let isFlushing = false;
+const p = Promise.resolve();
+
+function queueJob(job) {
+    queue.add(job);
+    if (!isFlushing) {
+        isFlushing = true;
+        p.then(() => {
+            try {
+                queue.forEach((job) => job());
+            } finally {
+                isFlushing = false;
+                queue.clear();
+            }
+        });
+    }
+}
 
 export function createRenderer(options = {}) {
     const { createElement, createTextNode, createCommentNode, setElementText, setText, insert, patchProps } = options;
@@ -48,12 +69,49 @@ export function createRenderer(options = {}) {
         } else if (typeof type === "object") {
             //  处理组件
             if (!n1) {
-                // mountComponent(n2, container, anchor);
+                mountComponent(n2, container, anchor);
             } else {
                 // patchComponent(n1, n2, anchor);
             }
         }
     }
+
+    function mountComponent(vnode, container, anchor) {
+        const componentOptions = vnode.type;
+        const { render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated } = componentOptions;
+
+        beforeCreate && beforeCreate(); //  调用生命周期钩子
+
+        const state = reactive(data());
+        const instance = {
+            //  组件实例
+            state,
+            isMounted: false,
+            subTree: null,
+        };
+        vnode.component = instance;
+        created && created().call(state); //  调用生命周期钩子
+
+        effect(
+            () => {
+                const subTree = render.call(state, state); //  render 函数内部可以通过this访问自身状态数据
+                if (!instance.isMounted) {
+                    beforeMount && beforeMount().call(state); //  调用生命周期钩子
+                    patch(null, subTree, container, anchor);
+                    instance.isMounted = true;
+                    mounted && mounted(); //  调用生命周期钩子
+                } else {
+                    beforeUpdate && beforeUpdate().call(state); //  调用生命周期钩子
+                    patch(instance.subTree, subTree, container, anchor);
+                    updated && updated().call(state); //  调用生命周期钩子
+                }
+                instance.subTree = subTree;
+            },
+            { scheduler: queueJob }
+        );
+    }
+
+    function patchComponent(n1, n2, anchor) {}
 
     function patchElement(n1, n2) {
         const el = (n2.el = n1.el);

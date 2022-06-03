@@ -10,32 +10,33 @@
     <body>
         <div id="app"></div>
         <script type="module">
-            import { Fragment, renderer } from "./index.js";
-            const vnode = {
-                type: "div",
-                children: [
-                    { type: "p", children: "1", key: "1" },
-                    { type: "p", children: "2", key: "2" },
-                    { type: "p", children: "3", key: "3" },
-                    { type: "p", children: "4", key: "4" },
-                    { type: "p", children: "6", key: "6" },
-                    { type: "p", children: "5", key: "5" },
-                ],
+            import { renderer } from "./index.js";
+            const MyComponent = {
+                name: "MyComponent",
+                data() {
+                    return {
+                        foo: 1,
+                    };
+                },
+                render() {
+                    return {
+                        type: "div",
+                        children: `${this.foo}`,
+                        props: {
+                            onClick: () => {
+                                for (let i = 0; i < 10; ++i) ++this.foo;
+                            },
+                        },
+                    };
+                },
             };
+
+            const CompVNode = {
+                type: MyComponent,
+            };
+
             const app = document.querySelector("#app");
-            renderer.render(vnode, app);
-            const vnode2 = {
-                type: "div",
-                children: [
-                    { type: "p", children: "1", key: "1" },
-                    { type: "p", children: "3", key: "3" },
-                    { type: "p", children: "4", key: "4" },
-                    { type: "p", children: "2", key: "2" },
-                    { type: "p", children: "7", key: "7" },
-                    { type: "p", children: "5", key: "5" },
-                ],
-            };
-            renderer.render(vnode2, app);
+            renderer.render(CompVNode, app);
         </script>
     </body>
 </html>
