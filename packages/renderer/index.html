@@ -18,9 +18,15 @@
                         foo: 1,
                     };
                 },
-                setup(props, setupContext) {
+                setup(props, { emit }) {
                     console.log(props.title);
-                    const { slot, emit, attrs, expose } = setupContext;
+                    // emit("change", 1, 2);
+                    return () => {
+                        return {
+                            type: "div",
+                            children: props.title,
+                        };
+                    };
                 },
                 render() {
                     return {

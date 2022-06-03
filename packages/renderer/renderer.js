@@ -78,8 +78,8 @@ export function createRenderer(options = {}) {
 
     function mountComponent(vnode, container, anchor) {
         const componentOptions = vnode.type;
+        let { render } = componentOptions;
         const {
-            render,
             data,
             setup,
             props: propsOption,
@@ -109,7 +109,7 @@ export function createRenderer(options = {}) {
         let setupState = null; //  用来存储 setup 返回的数据
         if (typeof setupResult === "function") {
             if (render) {
-                console.error("setup function returns render function, the render option will be ignore!");
+                console.warn("setup function returns render function, the render option will be ignore!");
                 render = setupResult;
             } else setupState = setupResult;
         }
