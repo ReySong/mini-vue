@@ -21,18 +21,22 @@
                 render() {
                     return {
                         type: "div",
-                        children: `${this.foo}`,
+                        children: this.title,
                         props: {
-                            onClick: () => {
-                                for (let i = 0; i < 10; ++i) ++this.foo;
-                            },
+                            onClick: () => (this.title = "Clicked!"),
                         },
                     };
                 },
             };
+            MyComponent.props = {
+                title: String,
+            };
 
             const CompVNode = {
                 type: MyComponent,
+                props: {
+                    title: "A big Title",
+                },
             };
 
             const app = document.querySelector("#app");

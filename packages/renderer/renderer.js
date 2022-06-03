@@ -1,4 +1,4 @@
-import { reactive, effect } from "../reactivity/index.js";
+import { reactive, shallowReactive, effect } from "../reactivity/index.js";
 
 export const Text = Symbol();
 export const Comment = Symbol();
@@ -71,39 +71,77 @@ export function createRenderer(options = {}) {
             if (!n1) {
                 mountComponent(n2, container, anchor);
             } else {
-                // patchComponent(n1, n2, anchor);
+                patchComponent(n1, n2, anchor);
             }
         }
     }
 
     function mountComponent(vnode, container, anchor) {
         const componentOptions = vnode.type;
-        const { render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated } = componentOptions;
+        const {
+            render,
+            data,
+            props: propsOption,
+            beforeCreate,
+            created,
+            beforeMount,
+            mounted,
+            beforeUpdate,
+            updated,
+        } = componentOptions;
 
         beforeCreate && beforeCreate(); //  调用生命周期钩子
 
         const state = reactive(data());
+        const [props, attrs] = resolveProps(propsOption, vnode.props);
         const instance = {
             //  组件实例
             state,
+            props: shallowReactive(props),
             isMounted: false,
             subTree: null,
         };
         vnode.component = instance;
-        created && created().call(state); //  调用生命周期钩子
+
+        const renderContext = new Proxy(instance, {
+            get(t, k) {
+                const { state, props } = t;
+                if (state && k in state) {
+                    return state[k];
+                } else if (k in props) {
+                    return props[k];
+                } else {
+                    console.error("property do not exist");
+                }
+            },
+            set(t, k, v) {
+                const { state, props } = t;
+                if (state && k in state) {
+                    state[k] = v;
+                } else if (k in props) {
+                    props[k] = v;
+                } else {
+                    console.error("property do not exist");
+                    return false;
+                }
+                return true;
+            },
+        });
+
+        created && created().call(renderContext); //  调用生命周期钩子
 
         effect(
             () => {
-                const subTree = render.call(state, state); //  render 函数内部可以通过this访问自身状态数据
+                const subTree = render.call(renderContext, renderContext); //  render 函数内部可以通过this访问自身状态数据
                 if (!instance.isMounted) {
-                    beforeMount && beforeMount().call(state); //  调用生命周期钩子
+                    beforeMount && beforeMount().call(renderContext); //  调用生命周期钩子
                     patch(null, subTree, container, anchor);
                     instance.isMounted = true;
                     mounted && mounted(); //  调用生命周期钩子
                 } else {
-                    beforeUpdate && beforeUpdate().call(state); //  调用生命周期钩子
+                    beforeUpdate && beforeUpdate().call(renderContext); //  调用生命周期钩子
                     patch(instance.subTree, subTree, container, anchor);
-                    updated && updated().call(state); //  调用生命周期钩子
+                    updated && updated().call(renderContext); //  调用生命周期钩子
                 }
                 instance.subTree = subTree;
             },
@@ -111,7 +149,35 @@ export function createRenderer(options = {}) {
         );
     }
 
-    function patchComponent(n1, n2, anchor) {}
+    function resolveProps(options, propsData) {
+        const props = {};
+        const attrs = {};
+        for (const key in propsData) {
+            if (key in options) props[key] = propsData[key];
+            else attrs[key] = propsData[key];
+        }
+        return [props, attrs];
+    }
+
+    function patchComponent(n1, n2, anchor) {
+        const instance = (n2.component = n1.component);
+        const { props } = instance;
+        if (hasPropsChanged(n1.props, n2.props)) {
+            const [nextProps] = resolveProps(n2.type.props, n2.props);
+            for (const k in nextProps) props[k] = nextProps[k];
+            for (const k in props) if (!(k in nextProps)) delete props[k];
+        }
+    }
+
+    function hasPropsChanged(prevProps, nextProps) {
+        const nextKeys = Object.keys(nextProps);
+        if (nextKeys.length !== Object.keys(prevProps).length) return true;
+        for (let i = 0; i < nextKeys.length; ++i) {
+            const key = nextKeys[i];
+            if (nextProps[key] !== prevProps[key]) return true;
+        }
+        return false;
+    }
 
     function patchElement(n1, n2) {
         const el = (n2.el = n1.el);
