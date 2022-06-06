@@ -80,7 +80,7 @@ export function createRenderer(options = {}) {
                     patch(null, c, container);
                 });
             else patchChildren(n1, n2, container);
-        } else if (typeof type === "object") {
+        } else if (typeof type === "object" || typeof type === "function") {
             //  处理组件
             if (!n1) {
                 mountComponent(n2, container, anchor);
@@ -91,7 +91,15 @@ export function createRenderer(options = {}) {
     }
 
     function mountComponent(vnode, container, anchor) {
-        const componentOptions = vnode.type;
+        const isFunctional = typeof vnode.type === "function";
+
+        const componentOptions = isFunctional
+            ? {
+                  render: vnode.type,
+                  props: vnode.type.props,
+              }
+            : vnode.type;
+
         let { render } = componentOptions;
         const { data, setup, beforeCreate, created, props: propsOption } = componentOptions;
 

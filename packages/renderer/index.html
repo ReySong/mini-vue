@@ -12,60 +12,73 @@
         <script type="module">
             import { renderer, Fragment, onMounted, defineAsyncComponent } from "./index.js";
 
-            function fetch() {
-                return new Promise((resolve, reject) => {
-                    setTimeout(() => {
-                        reject("err");
-                    }, 1000);
-                });
+            // function fetch() {
+            //     return new Promise((resolve, reject) => {
+            //         setTimeout(() => {
+            //             reject("err");
+            //         }, 1000);
+            //     });
+            // }
+
+            // const MyComponent = {
+            //     name: "MyComponent",
+            //     setup() {
+            //         return () => {
+            //             return {
+            //                 type: "div",
+            //                 children: "This is async component",
+            //             };
+            //         };
+            //     },
+            // };
+
+            // const LoadingComponent = {
+            //     name: "LoadingComponent",
+            //     setup() {
+            //         return () => {
+            //             return {
+            //                 type: "div",
+            //                 children: "This is loading component",
+            //             };
+            //         };
+            //     },
+            // };
+
+            // const AsyncComponent = defineAsyncComponent({
+            //     loader: () => {
+            //         return new Promise((resolve, reject) => {
+            //             setTimeout(() => {
+            //                 reject("err");
+            //             }, 1000);
+            //         });
+            //     },
+            //     onError: (retry, fail, retries) => {
+            //         if (retries <= 3) {
+            //             retry();
+            //             console.log(retries);
+            //         } else {
+            //             fail();
+            //         }
+            //     },
+            //     delay: 1000,
+            //     loadingComponent: LoadingComponent,
+            // });
+
+            // const CompVNode = {
+            //     type: AsyncComponent,
+            // };
+
+            function MyFuncComp(props) {
+                return { type: "h1", children: props.title };
             }
 
-            const MyComponent = {
-                name: "MyComponent",
-                setup() {
-                    return () => {
-                        return {
-                            type: "div",
-                            children: "This is async component",
-                        };
-                    };
-                },
+            MyFuncComp.props = {
+                title: String,
             };
-
-            const LoadingComponent = {
-                name: "LoadingComponent",
-                setup() {
-                    return () => {
-                        return {
-                            type: "div",
-                            children: "This is loading component",
-                        };
-                    };
-                },
-            };
-
-            const AsyncComponent = defineAsyncComponent({
-                loader: () => {
-                    return new Promise((resolve, reject) => {
-                        setTimeout(() => {
-                            reject("err");
-                        }, 1000);
-                    });
-                },
-                onError: (retry, fail, retries) => {
-                    if (retries <= 3) {
-                        retry();
-                        console.log(retries);
-                    } else {
-                        fail();
-                    }
-                },
-                delay: 1000,
-                loadingComponent: LoadingComponent,
-            });
 
             const CompVNode = {
-                type: AsyncComponent,
+                type: MyFuncComp,
+                props: { title: "Hello World" },
             };
 
             const app = document.querySelector("#app");
