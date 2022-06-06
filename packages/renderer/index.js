@@ -9,3 +9,5 @@ export {
     onBeforeUpdate,
     onUpdated,
 } from "./renderer.js";
+
+export { defineAsyncComponent } from "./component.js";

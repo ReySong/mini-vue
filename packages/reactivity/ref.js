@@ -1,9 +1,27 @@
-import { reactive } from "./reactive.js";
+import { reactive, readonly, shallowReactive, shallowReadonly } from "./reactive.js";
 
 export function ref(val) {
     const wrapper = { value: val };
     Object.defineProperty(wrapper, "isRef", { value: true, enumerable: false, writable: false });
     return reactive(wrapper);
+}
+
+export function shallowRef(val) {
+    const wrapper = { value: val };
+    Object.defineProperty(wrapper, "isRef", { value: true, enumerable: false, writable: false });
+    return shallowReactive(wrapper);
+}
+
+export function readonlyRef(val) {
+    const wrapper = { value: val };
+    Object.defineProperty(wrapper, "isRef", { value: true, enumerable: false, writable: false });
+    return readonly(wrapper);
+}
+
+export function shallowReadonlyRef(val) {
+    const wrapper = { value: val };
+    Object.defineProperty(wrapper, "isRef", { value: true, enumerable: false, writable: false });
+    return shallowReadonly(wrapper);
 }
 
 export function toRef(obj, property) {

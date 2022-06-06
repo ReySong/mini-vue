@@ -126,11 +126,9 @@ export function createRenderer(options = {}) {
         setCurrentInstance(null);
         let setupState = null; //  用来存储 setup 返回的数据
         if (typeof setupResult === "function") {
-            if (render) {
-                console.warn("setup function returns render function, the render option will be ignore!");
-                render = setupResult;
-            } else setupState = setupResult;
-        }
+            if (render) console.warn("setup function returns render function, the render option will be ignore!");
+            render = setupResult;
+        } else setupState = setupResult;
 
         vnode.component = instance;
 
@@ -454,6 +452,9 @@ export function createRenderer(options = {}) {
     function unmount(vnode) {
         if (vnode.type === Fragment) {
             vnode.children.forEach((c) => unmount(c));
+            return;
+        } else if (typeof vnode.type === "object") {
+            unmount(vnode.component.subTree);
             return;
         }
         const parent = vnode.el.parentNode;

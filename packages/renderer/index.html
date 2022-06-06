@@ -10,51 +10,62 @@
     <body>
         <div id="app"></div>
         <script type="module">
-            import { renderer, Fragment, onMounted } from "./index.js";
+            import { renderer, Fragment, onMounted, defineAsyncComponent } from "./index.js";
+
+            function fetch() {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        reject("err");
+                    }, 1000);
+                });
+            }
+
             const MyComponent = {
                 name: "MyComponent",
-                data() {
-                    return {
-                        foo: 1,
+                setup() {
+                    return () => {
+                        return {
+                            type: "div",
+                            children: "This is async component",
+                        };
                     };
                 },
-                setup(props, { emit, slot }) {
-                    onMounted(() => {
-                        console.log(123);
-                    }),
-                        emit("change", props.title);
-                    return {};
-                },
-                render() {
-                    return {
-                        type: Fragment,
-                        children: [this.$slots.header(), this.$slots.body(), this.$slots.footer()],
-                    };
-                },
-            };
-            MyComponent.props = {
-                title: String,
             };
 
+            const LoadingComponent = {
+                name: "LoadingComponent",
+                setup() {
+                    return () => {
+                        return {
+                            type: "div",
+                            children: "This is loading component",
+                        };
+                    };
+                },
+            };
+
+            const AsyncComponent = defineAsyncComponent({
+                loader: () => {
+                    return new Promise((resolve, reject) => {
+                        setTimeout(() => {
+                            reject("err");
+                        }, 1000);
+                    });
+                },
+                onError: (retry, fail, retries) => {
+                    if (retries <= 3) {
+                        retry();
+                        console.log(retries);
+                    } else {
+                        fail();
+                    }
+                },
+                delay: 1000,
+                loadingComponent: LoadingComponent,
+            });
+
             const CompVNode = {
-                type: MyComponent,
-                props: {
-                    title: "A big Title",
-                    onChange: (val) => {
-                        console.log(val);
-                    },
-                },
-                children: {
-                    header() {
-                        return { type: "h1", children: "我是标题" };
-                    },
-                    body() {
-                        return { type: "section", children: "我是内容" };
-                    },
-                    footer() {
-                        return { type: "p", children: "我是注脚" };
-                    },
-                },
+                type: AsyncComponent,
             };
 
             const app = document.querySelector("#app");
