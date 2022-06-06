@@ -11,3 +11,4 @@ export {
 } from "./renderer.js";
 
 export { defineAsyncComponent } from "./component.js";
+export { KeepAlive } from "./keepalive.js";

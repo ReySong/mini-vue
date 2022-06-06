@@ -10,7 +10,7 @@
     <body>
         <div id="app"></div>
         <script type="module">
-            import { renderer, Fragment, onMounted, defineAsyncComponent } from "./index.js";
+            import { renderer, Fragment, onMounted, defineAsyncComponent, KeepAlive } from "./index.js";
 
             // function fetch() {
             //     return new Promise((resolve, reject) => {
@@ -68,17 +68,23 @@
             //     type: AsyncComponent,
             // };
 
-            function MyFuncComp(props) {
-                return { type: "h1", children: props.title };
-            }
-
-            MyFuncComp.props = {
-                title: String,
+            const MyComp = {
+                name: "MyComp",
+                setup() {
+                    return () => {
+                        return { type: "h1", children: "Hello World" };
+                    };
+                },
             };
 
             const CompVNode = {
-                type: MyFuncComp,
-                props: { title: "Hello World" },
+                type: KeepAlive,
+                props: { max: 2 },
+                children: {
+                    default() {
+                        return { type: MyComp };
+                    },
+                },
             };
 
             const app = document.querySelector("#app");

@@ -4,10 +4,13 @@ export const Text = Symbol();
 export const Comment = Symbol();
 export const Fragment = Symbol();
 
-let currentInstance = null;
+export let currentInstance = null;
 function setCurrentInstance(instance) {
+    const prev = currentInstance;
     currentInstance = instance;
+    return prev;
 }
+
 const lifeCycleHooks = {};
 ["beforeMount", "mounted", "beforeUpdate", "updated"].forEach((method) => {
     let register = `on${method[0].toUpperCase() + method.slice(1)}`;
@@ -83,7 +86,8 @@ export function createRenderer(options = {}) {
         } else if (typeof type === "object" || typeof type === "function") {
             //  处理组件
             if (!n1) {
-                mountComponent(n2, container, anchor);
+                if (n2.keptAlive) n2.keepAliveInstance._activate(n2, container, anchor);
+                else mountComponent(n2, container, anchor);
             } else {
                 patchComponent(n1, n2, anchor);
             }
@@ -92,7 +96,6 @@ export function createRenderer(options = {}) {
 
     function mountComponent(vnode, container, anchor) {
         const isFunctional = typeof vnode.type === "function";
-
         const componentOptions = isFunctional
             ? {
                   render: vnode.type,
@@ -120,7 +123,18 @@ export function createRenderer(options = {}) {
             mounted: [],
             beforeUpdate: [],
             updated: [],
+            keepAliveCtx: null,
         };
+
+        const isKeepAlive = vnode.type.__isKeepAlive;
+        if (isKeepAlive) {
+            instance.keepAliveCtx = {
+                move(vnode, container, anchor) {
+                    insert(vnode.component.subTree.el, container, anchor);
+                },
+                createElement,
+            };
+        }
 
         function emit(event, ...payload) {
             const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
@@ -131,10 +145,10 @@ export function createRenderer(options = {}) {
 
         let setupState = null; //  用来存储 setup 返回的数据
         if (setup) {
-            const setupContent = { attrs, emit, slots };
-            setCurrentInstance(instance);
-            const setupResult = setup(shallowReadonly(instance.props), setupContent);
-            setCurrentInstance(null);
+            const setupContext = { attrs, emit, slots };
+            const prevInstance = setCurrentInstance(instance);
+            const setupResult = setup(shallowReadonly(instance.props), setupContext);
+            setCurrentInstance(prevInstance);
             if (typeof setupResult === "function") {
                 if (render) console.warn("setup function returns render function, the render option will be ignore!");
                 render = setupResult;
@@ -204,7 +218,7 @@ export function createRenderer(options = {}) {
         return [props, attrs];
     }
 
-    function patchComponent(n1, n2, anchor) {
+    function patchComponent(n1, n2) {
         const instance = (n2.component = n1.component);
         const { props } = instance;
         if (hasPropsChanged(n1.props, n2.props)) {
@@ -464,6 +478,8 @@ export function createRenderer(options = {}) {
         if (vnode.type === Fragment) {
             vnode.children.forEach((c) => unmount(c));
             return;
+        } else if (vnode.shouldKeepAlive) {
+            vnode.keepAliveInstance._deActivate(vnode);
         } else if (typeof vnode.type === "object") {
             unmount(vnode.component.subTree);
             return;
