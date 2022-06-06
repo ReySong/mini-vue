@@ -120,15 +120,18 @@ export function createRenderer(options = {}) {
             if (handler) handler(...payload);
             else console.warn("event is not exist!");
         }
-        const setupContent = { attrs, emit, slots };
-        setCurrentInstance(instance);
-        const setupResult = setup(shallowReadonly(instance.props), setupContent);
-        setCurrentInstance(null);
+
         let setupState = null; //  用来存储 setup 返回的数据
-        if (typeof setupResult === "function") {
-            if (render) console.warn("setup function returns render function, the render option will be ignore!");
-            render = setupResult;
-        } else setupState = setupResult;
+        if (setup) {
+            const setupContent = { attrs, emit, slots };
+            setCurrentInstance(instance);
+            const setupResult = setup(shallowReadonly(instance.props), setupContent);
+            setCurrentInstance(null);
+            if (typeof setupResult === "function") {
+                if (render) console.warn("setup function returns render function, the render option will be ignore!");
+                render = setupResult;
+            } else setupState = setupResult;
+        }
 
         vnode.component = instance;
 
