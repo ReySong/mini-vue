@@ -58,6 +58,7 @@ export function createRenderer(options = {}) {
             n1 = null;
         }
         const { type } = n2;
+
         if (typeof type === "string") {
             if (!n1) mount(n2, container, anchor);
             else patchElement(n1, n2);
@@ -83,6 +84,16 @@ export function createRenderer(options = {}) {
                     patch(null, c, container);
                 });
             else patchChildren(n1, n2, container);
+        } else if (typeof type === "object" && type.__isTeleport) {
+            //  将控制权交给 Teleport 组件选项的 process 函数
+            type.process(n1, n2, container, anchor, {
+                patch,
+                patchChildren,
+                unmount,
+                move(vnode, container, anchor) {
+                    insert(vnode.component ? vnode.component.subTree.el : vnode.el, container, anchor);
+                },
+            });
         } else if (typeof type === "object" || typeof type === "function") {
             //  处理组件
             if (!n1) {

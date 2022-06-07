@@ -10,7 +10,7 @@
     <body>
         <div id="app"></div>
         <script type="module">
-            import { renderer, Fragment, onMounted, defineAsyncComponent, KeepAlive } from "./index.js";
+            import { renderer, Fragment, onMounted, defineAsyncComponent, KeepAlive, Teleport } from "./index.js";
 
             // function fetch() {
             //     return new Promise((resolve, reject) => {
@@ -68,27 +68,17 @@
             //     type: AsyncComponent,
             // };
 
-            const MyComp = {
-                name: "MyComp",
-                setup() {
-                    return () => {
-                        return { type: "h1", children: "Hello World" };
-                    };
-                },
-            };
-
-            const CompVNode = {
-                type: KeepAlive,
-                props: { max: 2 },
-                children: {
-                    default() {
-                        return { type: MyComp };
-                    },
-                },
+            const TeleportComp = {
+                type: Teleport,
+                props: { to: "body" },
+                children: [
+                    { type: "h1", children: "Title" },
+                    { type: "p", children: "Content" },
+                ],
             };
 
             const app = document.querySelector("#app");
-            renderer.render(CompVNode, app);
+            renderer.render(TeleportComp, app);
         </script>
     </body>
 </html>
