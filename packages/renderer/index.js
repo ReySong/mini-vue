@@ -13,3 +13,4 @@ export {
 export { defineAsyncComponent } from "./component.js";
 export { KeepAlive } from "./keepalive.js";
 export { Teleport } from "./teleport.js";
+export { Transition } from "./transition.js";

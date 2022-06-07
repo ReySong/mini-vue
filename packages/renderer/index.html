@@ -5,12 +5,51 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>renderer</title>
+        <style>
+            .box {
+                width: 100px;
+                height: 100px;
+                background-color: red;
+            }
+
+            .enter-from {
+                transform: translateX(200px);
+            }
+
+            .enter-to {
+                transform: translateX(0);
+            }
+
+            .enter-active {
+                transition: transform 1s ease-in-out;
+            }
+
+            .leave-from {
+                transform: translateX(0);
+            }
+
+            .leave-to {
+                transform: translateX(200px);
+            }
+
+            .leave-active {
+                transition: transform 2s ease-in-out;
+            }
+        </style>
     </head>
 
     <body>
         <div id="app"></div>
         <script type="module">
-            import { renderer, Fragment, onMounted, defineAsyncComponent, KeepAlive, Teleport } from "./index.js";
+            import {
+                renderer,
+                Fragment,
+                onMounted,
+                defineAsyncComponent,
+                KeepAlive,
+                Teleport,
+                Transition,
+            } from "./index.js";
 
             // function fetch() {
             //     return new Promise((resolve, reject) => {
@@ -68,17 +107,34 @@
             //     type: AsyncComponent,
             // };
 
-            const TeleportComp = {
-                type: Teleport,
-                props: { to: "body" },
-                children: [
-                    { type: "h1", children: "Title" },
-                    { type: "p", children: "Content" },
-                ],
+            // const TeleportComp = {
+            //     type: Teleport,
+            //     props: { to: "body" },
+            //     children: [
+            //         { type: "h1", children: "Title" },
+            //         { type: "p", children: "Content" },
+            //     ],
+            // };
+
+            const TransitionComp = {
+                type: Transition,
+                children: {
+                    default() {
+                        return {
+                            type: "div",
+                            props: {
+                                class: "box",
+                                onClick: () => {
+                                    renderer.render(null, app);
+                                },
+                            },
+                        };
+                    },
+                },
             };
 
             const app = document.querySelector("#app");
-            renderer.render(TeleportComp, app);
+            renderer.render(TransitionComp, app);
         </script>
     </body>
 </html>

@@ -482,10 +482,14 @@ export function createRenderer(options = {}) {
                 patchProps(el, key, null, vnode.props[key]);
             }
         }
+        const needTransition = vnode.transition;
+        if (needTransition) vnode.transition.beforeEnter(el);
         insert(el, container, anchor);
+        if (needTransition) vnode.transition.enter(el);
     }
 
     function unmount(vnode) {
+        const needTransition = vnode.transition;
         if (vnode.type === Fragment) {
             vnode.children.forEach((c) => unmount(c));
             return;
@@ -496,7 +500,11 @@ export function createRenderer(options = {}) {
             return;
         }
         const parent = vnode.el.parentNode;
-        if (parent) parent.removeChild(vnode.el);
+        if (parent) {
+            const performRemove = () => parent.removeChild(vnode.el);
+            if (needTransition) vnode.transition.leave(vnode.el, performRemove);
+            else performRemove();
+        }
     }
 
     return {
