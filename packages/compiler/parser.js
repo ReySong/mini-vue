@@ -50,15 +50,15 @@ export function tokenize(str) {
                 str = str.slice(1);
                 break;
             case State.text:
-                if (isAlpha(char)) {
-                    chars.push(char);
-                } else if (char === "<") {
+                if (char === "<") {
                     currentState = State.tagOpen;
                     tokens.push({
                         type: "text",
                         content: chars.join(""),
                     });
                     chars.length = 0;
+                } else if (char) {
+                    chars.push(char);
                 }
                 str = str.slice(1);
                 break;
