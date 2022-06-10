@@ -141,7 +141,7 @@ export function traverseNode(ast, context) {
             transforms[i](context.currentNode, context);
         }
 
-    const children = context.currentNode.children;
+    const children = context?.currentNode?.children;
     if (children) {
         for (let i = 0; i < children.length; ++i) {
             context.parent = context.currentNode;
@@ -160,6 +160,12 @@ export function transform(ast) {
             context.parent.children[context.childIndex] = node;
             context.currentNode = node;
         },
+        removeNode() {
+            if (context.parent) {
+                context.parent.children.splice(context.childIndex, 1);
+                context.currentNode = null;
+            }
+        },
         nodeTransforms: [transformElement, transformText],
     };
     traverseNode(ast, context);
@@ -174,9 +180,10 @@ function transformElement(node) {
 
 function transformText(node, context) {
     if (node.type === "Text") {
-        context.replaceNode({
-            type: "Element",
-            tag: "span",
-        });
+        // context.replaceNode({
+        //     type: "Element",
+        //     tag: "span",
+        // });
+        context.removeNode();
     }
 }
