@@ -133,36 +133,50 @@ export function dump(node, indent = 0) {
 }
 
 export function traverseNode(ast, context) {
-    const currentNode = ast;
+    context.currentNode = ast;
 
     const transforms = context?.nodeTransforms;
     if (transforms)
         for (let i = 0; i < transforms.length; ++i) {
-            transforms[i](currentNode, context);
+            transforms[i](context.currentNode, context);
         }
 
-    const children = currentNode.children;
+    const children = context.currentNode.children;
     if (children) {
         for (let i = 0; i < children.length; ++i) {
+            context.parent = context.currentNode;
+            context.childIndex = i;
             traverseNode(children[i], context);
         }
     }
 }
 
 export function transform(ast) {
-    function transformElement(node) {
-        if (node.type === "Element" && node.tag === "p") {
-            node.tag = "h1";
-        }
-    }
-    function transformText(node) {
-        if (node.type === "Text") {
-            node.content = node.content.repeat(2);
-        }
-    }
     const context = {
+        currentNode: null,
+        childIndex: 0, //  当前节点在父节点的 children 中的位置索引
+        parent: null,
+        replaceNode(node) {
+            context.parent.children[context.childIndex] = node;
+            context.currentNode = node;
+        },
         nodeTransforms: [transformElement, transformText],
     };
     traverseNode(ast, context);
     dump(ast);
+}
+
+function transformElement(node) {
+    if (node.type === "Element" && node.tag === "p") {
+        node.tag = "h1";
+    }
+}
+
+function transformText(node, context) {
+    if (node.type === "Text") {
+        context.replaceNode({
+            type: "Element",
+            tag: "span",
+        });
+    }
 }
