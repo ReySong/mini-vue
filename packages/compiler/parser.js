@@ -152,11 +152,11 @@ export function traverseNode(ast, context) {
 export function transform(ast) {
     function transformElement(node) {
         if (node.type === "Element" && node.tag === "p") {
-            node.tag === "h1";
+            node.tag = "h1";
         }
     }
     function transformText(node) {
-        if (node.type === "Text" && node.tag === "p") {
+        if (node.type === "Text") {
             node.content = node.content.repeat(2);
         }
     }
