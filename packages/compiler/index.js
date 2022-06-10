@@ -1,1 +1,1 @@
-export { tokenize, parse } from "./parser.js";
+export { tokenize, parse, dump, traverseNode, transform } from "./parser.js";

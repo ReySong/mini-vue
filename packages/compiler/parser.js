@@ -122,3 +122,47 @@ export function parse(str) {
     }
     return root;
 }
+
+export function dump(node, indent = 0) {
+    const type = node.type;
+    const desc = node.type === "Root" ? "" : node.type === "Element" ? node.tag : node.content;
+    console.log(`${"-".repeat(indent)}${type}: ${desc}`);
+    if (node.children) {
+        node.children.forEach((n) => dump(n, indent + 2));
+    }
+}
+
+export function traverseNode(ast, context) {
+    const currentNode = ast;
+
+    const transforms = context?.nodeTransforms;
+    if (transforms)
+        for (let i = 0; i < transforms.length; ++i) {
+            transforms[i](currentNode, context);
+        }
+
+    const children = currentNode.children;
+    if (children) {
+        for (let i = 0; i < children.length; ++i) {
+            traverseNode(children[i], context);
+        }
+    }
+}
+
+export function transform(ast) {
+    function transformElement(node) {
+        if (node.type === "Element" && node.tag === "p") {
+            node.tag === "h1";
+        }
+    }
+    function transformText(node) {
+        if (node.type === "Text" && node.tag === "p") {
+            node.content = node.content.repeat(2);
+        }
+    }
+    const context = {
+        nodeTransforms: [transformElement, transformText],
+    };
+    traverseNode(ast, context);
+    dump(ast);
+}
