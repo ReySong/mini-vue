@@ -135,11 +135,14 @@ export function dump(node, indent = 0) {
 export function traverseNode(ast, context) {
     context.currentNode = ast;
 
-    const transforms = context?.nodeTransforms;
-    if (transforms)
-        for (let i = 0; i < transforms.length; ++i) {
-            transforms[i](context.currentNode, context);
+    const exitCbs = []; //  退出阶段回调数组
+    const transforms = context.nodeTransforms;
+    for (let i = 0; i < transforms.length; ++i) {
+        const onExit = transforms[i](context.currentNode, context);
+        if (onExit) {
+            exitCbs.push(onExit);
         }
+    }
 
     const children = context?.currentNode?.children;
     if (children) {
@@ -148,6 +151,11 @@ export function traverseNode(ast, context) {
             context.childIndex = i;
             traverseNode(children[i], context);
         }
+    }
+
+    let i = exitCbs.length;
+    while (i--) {
+        exitCbs[i]();
     }
 }
 
@@ -166,10 +174,24 @@ export function transform(ast) {
                 context.currentNode = null;
             }
         },
-        nodeTransforms: [transformElement, transformText],
+        nodeTransforms: [transformB, transformA],
     };
     traverseNode(ast, context);
     dump(ast);
+}
+
+function transformA() {
+    console.log("transformA 进入阶段执行");
+    return () => {
+        console.log("transformA 结束阶段执行");
+    };
+}
+
+function transformB() {
+    console.log("transformB 进入阶段执行");
+    return () => {
+        console.log("transformB 结束阶段执行");
+    };
 }
 
 function transformElement(node) {
@@ -184,6 +206,6 @@ function transformText(node, context) {
         //     type: "Element",
         //     tag: "span",
         // });
-        context.removeNode();
+        // context.removeNode();
     }
 }
