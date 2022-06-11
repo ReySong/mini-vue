@@ -159,8 +159,9 @@ export function traverseNode(ast, context) {
     }
 }
 
-export function transform(ast) {
-    const context = {
+export function transform(
+    ast,
+    context = {
         currentNode: null,
         childIndex: 0, //  当前节点在父节点的 children 中的位置索引
         parent: null,
@@ -174,38 +175,9 @@ export function transform(ast) {
                 context.currentNode = null;
             }
         },
-        nodeTransforms: [transformB, transformA],
-    };
+        nodeTransforms: [],
+    }
+) {
     traverseNode(ast, context);
     dump(ast);
-}
-
-function transformA() {
-    console.log("transformA 进入阶段执行");
-    return () => {
-        console.log("transformA 结束阶段执行");
-    };
-}
-
-function transformB() {
-    console.log("transformB 进入阶段执行");
-    return () => {
-        console.log("transformB 结束阶段执行");
-    };
-}
-
-function transformElement(node) {
-    if (node.type === "Element" && node.tag === "p") {
-        node.tag = "h1";
-    }
-}
-
-function transformText(node, context) {
-    if (node.type === "Text") {
-        // context.replaceNode({
-        //     type: "Element",
-        //     tag: "span",
-        // });
-        // context.removeNode();
-    }
 }

@@ -14,7 +14,7 @@ const FunctionDeclNode = {
                     type: "Identifier",
                     name: "h",
                 },
-                arguments: [
+                args: [
                     {
                         type: "StringLiteral",
                         value: "div",
@@ -53,11 +53,52 @@ function createArrayExpression(elements) {
     };
 }
 
-function createCallExpression(callee, arguments) {
+function createCallExpression(callee, args) {
     //  用来创建 CallExpresstion 节点
     return {
         type: "CallExpresstion",
         callee: createIdentifier(callee),
-        arguments,
+        args,
+    };
+}
+
+export function transformText(node) {
+    if (node.type !== "Text") return;
+    node.jsNode = createStringLiteral(node.content);
+}
+
+export function transformElement(node) {
+    //  将转换逻辑编写在退出逻辑中，这样才能保证处理该节点时其子节点全部处理完毕
+    return () => {
+        if (node.type !== "Element") return;
+
+        //  1. 创建 h 函数调用语句
+        const callExp = createCallExpression("h", [createStringLiteral(node.tag)]);
+        //  2. 处理 h 函数调用的参数
+        node.children.length === 1
+            ? callExp.args.push(node.children[0].jsNode)
+            : callExp.args.push(createArrayExpression(node.children.map((c) => c.jsNode)));
+        node.jsNode = callExp;
+    };
+}
+
+export function transformRoot(node) {
+    return () => {
+        if (node.type !== "Root") return;
+
+        const vnodeJSAST = node.children[0].jsNode;
+        node.jsNode = {
+            type: "FunctionDecl",
+            id: {
+                type: "Identifier",
+            },
+            params: [],
+            body: [
+                {
+                    TypeError: "ReturnStatement",
+                    return: vnodeJSAST,
+                },
+            ],
+        };
     };
 }
