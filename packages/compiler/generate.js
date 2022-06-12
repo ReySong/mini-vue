@@ -60,7 +60,7 @@ function genNodeList(nodes, context) {
         const node = nodes[i];
         genNode(node, context);
         if (i < nodes.length - 1) {
-            push(",");
+            push(", ");
         }
     }
 }
