@@ -158,26 +158,3 @@ export function traverseNode(ast, context) {
         exitCbs[i]();
     }
 }
-
-export function transform(
-    ast,
-    context = {
-        currentNode: null,
-        childIndex: 0, //  当前节点在父节点的 children 中的位置索引
-        parent: null,
-        replaceNode(node) {
-            context.parent.children[context.childIndex] = node;
-            context.currentNode = node;
-        },
-        removeNode() {
-            if (context.parent) {
-                context.parent.children.splice(context.childIndex, 1);
-                context.currentNode = null;
-            }
-        },
-        nodeTransforms: [],
-    }
-) {
-    traverseNode(ast, context);
-    dump(ast);
-}
