@@ -1,5 +1,5 @@
-import { parse, transform } from "./packages/compiler/index.js";
+import { compile } from "./packages/compiler/index.js";
 
-let root = parse("<p>Vue</p>");
+const code = compile("<p>Vue</p>");
 
-transform(root);
+console.log(code);
