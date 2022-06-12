@@ -122,39 +122,3 @@ export function parse(str) {
     }
     return root;
 }
-
-export function dump(node, indent = 0) {
-    const type = node.type;
-    const desc = node.type === "Root" ? "" : node.type === "Element" ? node.tag : node.content;
-    console.log(`${"-".repeat(indent)}${type}: ${desc}`);
-    if (node.children) {
-        node.children.forEach((n) => dump(n, indent + 2));
-    }
-}
-
-export function traverseNode(ast, context) {
-    context.currentNode = ast;
-
-    const exitCbs = []; //  退出阶段回调数组
-    const transforms = context.nodeTransforms;
-    for (let i = 0; i < transforms.length; ++i) {
-        const onExit = transforms[i](context.currentNode, context);
-        if (onExit) {
-            exitCbs.push(onExit);
-        }
-    }
-
-    const children = context?.currentNode?.children;
-    if (children) {
-        for (let i = 0; i < children.length; ++i) {
-            context.parent = context.currentNode;
-            context.childIndex = i;
-            traverseNode(children[i], context);
-        }
-    }
-
-    let i = exitCbs.length;
-    while (i--) {
-        exitCbs[i]();
-    }
-}

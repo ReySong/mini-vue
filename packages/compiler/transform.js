@@ -62,9 +62,44 @@ function createCallExpression(callee, args) {
     };
 }
 
-export function transform(
-    ast,
-    context = {
+export function dump(node, indent = 0) {
+    const type = node.type;
+    const desc = node.type === "Root" ? "" : node.type === "Element" ? node.tag : node.content;
+    console.log(`${"-".repeat(indent)}${type}: ${desc}`);
+    if (node.children) {
+        node.children.forEach((n) => dump(n, indent + 2));
+    }
+}
+
+function traverseNode(ast, context) {
+    context.currentNode = ast;
+
+    const exitCbs = []; //  退出阶段回调数组
+    const transforms = context.nodeTransforms;
+    for (let i = 0; i < transforms.length; ++i) {
+        const onExit = transforms[i](context.currentNode, context);
+        if (onExit) {
+            exitCbs.push(onExit);
+        }
+    }
+
+    const children = context?.currentNode?.children;
+    if (children) {
+        for (let i = 0; i < children.length; ++i) {
+            context.parent = context.currentNode;
+            context.childIndex = i;
+            traverseNode(children[i], context);
+        }
+    }
+
+    let i = exitCbs.length;
+    while (i--) {
+        exitCbs[i]();
+    }
+}
+
+export function transform(ast) {
+    const context = {
         currentNode: null,
         childIndex: 0, //  当前节点在父节点的 children 中的位置索引
         parent: null,
@@ -78,19 +113,17 @@ export function transform(
                 context.currentNode = null;
             }
         },
-        nodeTransforms: [],
-    }
-) {
+        nodeTransforms: [transformRoot, transformElement, transformText],
+    };
     traverseNode(ast, context);
-    dump(ast);
 }
 
-export function transformText(node) {
+function transformText(node) {
     if (node.type !== "Text") return;
     node.jsNode = createStringLiteral(node.content);
 }
 
-export function transformElement(node) {
+function transformElement(node) {
     //  将转换逻辑编写在退出逻辑中，这样才能保证处理该节点时其子节点全部处理完毕
     return () => {
         if (node.type !== "Element") return;
@@ -105,7 +138,7 @@ export function transformElement(node) {
     };
 }
 
-export function transformRoot(node) {
+function transformRoot(node) {
     return () => {
         if (node.type !== "Root") return;
 
@@ -114,11 +147,12 @@ export function transformRoot(node) {
             type: "FunctionDecl",
             id: {
                 type: "Identifier",
+                name: "render",
             },
             params: [],
             body: [
                 {
-                    TypeError: "ReturnStatement",
+                    type: "ReturnStatement",
                     return: vnodeJSAST,
                 },
             ],
